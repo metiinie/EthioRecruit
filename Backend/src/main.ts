@@ -44,10 +44,22 @@ async function bootstrap() {
         contentSecurityPolicy: false, // Disable CSP for dev
     });
 
+    // Swagger OpenAPI Documentation
+    const { DocumentBuilder, SwaggerModule } = require('@nestjs/swagger');
+    const swaggerConfig = new DocumentBuilder()
+        .setTitle('EthioHire SaaS API')
+        .setDescription('Production-grade Multi-Tenant Overseas Recruitment Platform API')
+        .setVersion('1.0')
+        .addBearerAuth()
+        .build();
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup('v1/docs', app, document);
+
     const port = configService.get<number>('PORT') || 3000;
     await app.listen(port, '0.0.0.0');
 
     Logger.log(`🚀 EthioHire API running on http://localhost:${port}/v1`, 'Bootstrap');
+    Logger.log(`📚 Swagger API Docs available at http://localhost:${port}/v1/docs`, 'Bootstrap');
 }
 
 bootstrap();
