@@ -6,20 +6,18 @@ export class AgenciesService {
     constructor(private readonly prisma: PrismaService) { }
 
     async findAllPublic() {
-        const agencies = await this.prisma.agency.findMany({
-            where: { isVerified: true },
+        const agencies = await this.prisma.organization.findMany({
+            where: { isVerified: true, type: 'AGENCY' },
             select: {
                 id: true,
                 name: true,
                 logoUrl: true,
-                coverPhotoUrl: true,
-                description: true,
+                bannerUrl: true,
                 phone: true,
                 email: true,
                 city: true,
                 country: true,
                 licenseNumber: true,
-                licenseVerifiedAt: true,
                 isVerified: true,
                 contactChannels: true,
                 _count: {
@@ -35,7 +33,7 @@ export class AgenciesService {
     }
 
     async findOnePublic(id: string) {
-        const agency = await this.prisma.agency.findUnique({
+        const agency = await this.prisma.organization.findUnique({
             where: { id },
             include: {
                 contactChannels: true,
@@ -57,3 +55,4 @@ export class AgenciesService {
         return { data: agency };
     }
 }
+

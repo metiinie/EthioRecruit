@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PipelineStage } from '@prisma/client';
 
@@ -7,22 +7,17 @@ export class PipelineService {
     constructor(private readonly prisma: PrismaService) { }
 
     // Get Kanban board items for an agency
-    async getKanbanBoard(agencyId: string, vacancyId?: string) {
-        const where: any = {
-            vacancy: { agencyId },
-        };
-        if (vacancyId) where.vacancyId = vacancyId;
+    async getKanbanBoard(agencyId: string, candidateId?: string) {
+        const where: any = { agencyId, isActive: true };
+        if (candidateId) where.candidateId = candidateId;
 
-        const applications = await this.prisma.application.findMany({
+        const pipelines = await this.prisma.hiringPipeline.findMany({
             where,
             include: {
-                user: {
-                    select: { id: true, firstName: true, lastName: true, phone: true, profilePhoto: true },
+                candidate: {
+                    select: { id: true, firstName: true, lastName: true, photoUrl: true, category: true },
                 },
-                vacancy: {
-                    select: { id: true, title: true, country: true, salaryCurrency: true },
-                },
-                auditLogs: { orderBy: { createdAt: 'desc' }, take: 1 },
+                stageHistory: { orderBy: { enteredAt: 'desc' }, take: 1 },
             },
             orderBy: { updatedAt: 'desc' },
         });
@@ -33,79 +28,76 @@ export class PipelineService {
             stages[stage] = [];
         });
 
-        applications.forEach((app) => {
-            const stageKey = app.status as string;
+        pipelines.forEach((item) => {
+            const stageKey = item.currentStage as string;
             if (stages[stageKey]) {
-                stages[stageKey].push(app);
+                stages[stageKey].push(item);
             } else {
-                stages['APPLIED'].push(app);
+                stages['APPLIED'].push(item);
             }
         });
 
         return { data: stages };
     }
 
-    // Advance or move application stage
+    // Advance or move pipeline stage
     async moveStage(
-        applicationId: string,
+        pipelineId: string,
         agencyId: string,
         adminId: string,
         newStage: PipelineStage,
         notes?: string,
     ) {
-        const application = await this.prisma.application.findUnique({
-            where: { id: applicationId },
-            include: { vacancy: true },
+        const pipeline = await this.prisma.hiringPipeline.findUnique({
+            where: { id: pipelineId },
         });
 
-        if (!application) throw new NotFoundException('Application not found');
-        if (application.vacancy.agencyId !== agencyId) {
-            throw new ForbiddenException('Access denied to application from another agency');
+        if (!pipeline) throw new NotFoundException('Pipeline record not found');
+        if (pipeline.agencyId !== agencyId) {
+            throw new ForbiddenException('Access denied to pipeline record from another agency');
         }
 
-        const previousStage = application.status;
+        const previousStage = pipeline.currentStage;
 
-        // Transaction to update application status + log audit trail
-        const [updatedApp, auditLog] = await this.prisma.$transaction([
-            this.prisma.application.update({
-                where: { id: applicationId },
+        // Transaction to update pipeline stage + log stage history
+        const [updatedPipeline, stageHistory] = await this.prisma.$transaction([
+            this.prisma.hiringPipeline.update({
+                where: { id: pipelineId },
                 data: {
-                    status: newStage as any,
-                    reviewerNotes: notes || application.reviewerNotes,
+                    currentStage: newStage,
+                    notes: notes || pipeline.notes,
                 },
             }),
-            this.prisma.pipelineAudit.create({
+            this.prisma.pipelineStageHistory.create({
                 data: {
-                    applicationId,
-                    fromStage: previousStage as any,
-                    toStage: newStage,
-                    changedById: adminId,
-                    notes: notes || `Stage updated from ${previousStage} to ${newStage}`,
+                    pipelineId,
+                    stage: newStage,
+                    updatedBy: adminId,
+                    notes: notes || `Stage moved from ${previousStage} to ${newStage}`,
                 },
             }),
         ]);
 
-        return { data: { application: updatedApp, auditLog } };
+        return { data: { pipeline: updatedPipeline, stageHistory } };
     }
 
-    // Get full stage audit trail
-    async getAuditTrail(applicationId: string, agencyId: string) {
-        const application = await this.prisma.application.findUnique({
-            where: { id: applicationId },
-            include: { vacancy: true },
+    // Get full stage history
+    async getAuditTrail(pipelineId: string, agencyId: string) {
+        const pipeline = await this.prisma.hiringPipeline.findUnique({
+            where: { id: pipelineId },
         });
 
-        if (!application) throw new NotFoundException('Application not found');
-        if (application.vacancy.agencyId !== agencyId) {
+        if (!pipeline) throw new NotFoundException('Pipeline record not found');
+        if (pipeline.agencyId !== agencyId) {
             throw new ForbiddenException('Access denied');
         }
 
-        const auditTrail = await this.prisma.pipelineAudit.findMany({
-            where: { applicationId },
-            include: { changedBy: { select: { id: true, firstName: true, lastName: true, email: true } } },
-            orderBy: { createdAt: 'desc' },
+        const auditTrail = await this.prisma.pipelineStageHistory.findMany({
+            where: { pipelineId },
+            orderBy: { enteredAt: 'desc' },
         });
 
         return { data: auditTrail };
     }
 }
+

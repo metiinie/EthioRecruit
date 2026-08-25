@@ -16,7 +16,6 @@ export class ApplicationsService {
                         agency: { select: { id: true, name: true, logoUrl: true } },
                     },
                 },
-                auditLogs: { orderBy: { createdAt: 'desc' }, take: 1 },
             },
             orderBy: { createdAt: 'desc' },
         });

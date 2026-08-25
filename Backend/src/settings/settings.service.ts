@@ -36,8 +36,8 @@ export class SettingsService {
         const channel = await this.prisma.agencyContactChannel.create({
             data: {
                 agencyId,
-                type: data.type,
-                value: data.value,
+                channelType: data.type || data.channelType,
+                channelValue: data.value || data.channelValue,
                 label: data.label,
                 isPrimary: data.isPrimary || false,
             },

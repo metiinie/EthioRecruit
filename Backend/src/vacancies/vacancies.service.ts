@@ -92,7 +92,7 @@ export class VacanciesService {
 
         // Check if user already applied
         const existing = await this.prisma.application.findUnique({
-            key: { vacancyId_userId: { vacancyId, userId } } as any,
+            where: { vacancyId_userId: { vacancyId, userId } },
         }).catch(() => null);
 
         if (existing) {
@@ -151,7 +151,33 @@ export class VacanciesService {
         const vacancy = await this.prisma.jobVacancy.create({
             data: {
                 agencyId,
-                ...dto,
+                categoryId: dto.categoryId,
+                title: dto.title,
+                description: dto.description,
+                requirements: dto.requirements || [],
+                country: dto.country,
+                city: dto.city,
+                employerType: dto.employerType || 'individual_family',
+                employerName: dto.employerName,
+                showEmployerName: dto.showEmployerName ?? false,
+                salaryMin: dto.salaryMin ? Math.round(dto.salaryMin) : 0,
+                salaryMax: dto.salaryMax ? Math.round(dto.salaryMax) : 0,
+                salaryCurrency: dto.salaryCurrency || 'USD',
+                contractPeriodYears: dto.contractPeriodYears || 2,
+                workingHoursPerDay: dto.workingHoursPerDay || 8,
+                workingDaysPerWeek: dto.workingDaysPerWeek || 6,
+                visaSponsorship: dto.visaSponsorship ?? true,
+                accommodationProvided: dto.accommodationProvided ?? true,
+                mealsProvided: dto.mealsProvided ?? true,
+                transportationProvided: dto.transportationProvided ?? false,
+                healthInsurance: dto.healthInsurance ?? true,
+                annualLeaveDays: dto.annualLeaveDays || 30,
+                genderPreference: dto.genderPreference || 'any',
+                ageMin: dto.ageMin,
+                ageMax: dto.ageMax,
+                experienceRequired: dto.experienceRequired || 0,
+                vacanciesCount: dto.vacanciesCount || 1,
+                applicationDeadline: dto.applicationDeadline,
                 status: VacancyStatus.DRAFT,
             },
             include: { category: true },

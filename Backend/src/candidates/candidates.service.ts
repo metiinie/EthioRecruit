@@ -144,10 +144,25 @@ export class CandidatesService {
     }
 
     async createAdmin(agencyId: string, dto: CreateCandidateDto) {
+        const { currentCity, ...rest } = dto as any;
         const candidate = await this.prisma.candidate.create({
             data: {
                 agencyId,
-                ...dto,
+                categoryId: dto.categoryId,
+                firstName: dto.firstName,
+                lastName: dto.lastName,
+                dateOfBirth: dto.dateOfBirth,
+                gender: dto.gender || 'female',
+                nationality: dto.nationality || 'Ethiopian',
+                religion: dto.religion,
+                maritalStatus: dto.maritalStatus,
+                summary: dto.summary,
+                educationLevel: dto.educationLevel,
+                yearsOfExperience: dto.yearsOfExperience || 0,
+                currentCountry: dto.currentCountry || 'Ethiopia',
+                city: currentCity || dto.currentCity,
+                skills: dto.skills || [],
+                languages: dto.languages || [],
             },
             include: { category: true },
         });

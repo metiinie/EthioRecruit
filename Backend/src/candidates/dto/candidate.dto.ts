@@ -1,27 +1,27 @@
-import { IsString, IsNotEmpty, IsEnum, IsOptional, IsInt, IsBoolean, IsArray, IsDate } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsInt, IsBoolean, IsArray, IsDate } from 'class-validator';
 import { Type } from 'class-transformer';
-import { Gender, MedicalStatus, VisaStatus } from '@prisma/client';
 
 export class CreateCandidateDto {
     @IsString()
     @IsNotEmpty()
-    categoryId: string;
+    categoryId!: string;
 
     @IsString()
     @IsNotEmpty()
-    firstName: string;
+    firstName!: string;
 
     @IsString()
     @IsNotEmpty()
-    lastName: string;
+    lastName!: string;
 
     @IsOptional()
     @Type(() => Date)
     @IsDate()
     dateOfBirth?: Date;
 
-    @IsEnum(Gender)
-    gender: Gender;
+    @IsString()
+    @IsOptional()
+    gender?: string = 'female';
 
     @IsString()
     @IsOptional()
@@ -79,13 +79,13 @@ export class UpdateCandidateDto extends CreateCandidateDto {
     @IsOptional()
     isPublished?: boolean;
 
-    @IsEnum(MedicalStatus)
+    @IsString()
     @IsOptional()
-    medicalStatus?: MedicalStatus;
+    medicalStatus?: string;
 
-    @IsEnum(VisaStatus)
+    @IsString()
     @IsOptional()
-    visaStatus?: VisaStatus;
+    visaStatus?: string;
 }
 
 export class CandidateFiltersDto {
@@ -94,12 +94,12 @@ export class CandidateFiltersDto {
     categoryId?: string;
 
     @IsOptional()
-    @IsEnum(Gender)
-    gender?: Gender;
+    @IsString()
+    gender?: string;
 
     @IsOptional()
-    @IsEnum(MedicalStatus)
-    medicalStatus?: MedicalStatus;
+    @IsString()
+    medicalStatus?: string;
 
     @IsOptional()
     @IsString()
@@ -119,3 +119,4 @@ export class CandidateFiltersDto {
     @Type(() => Number)
     perPage?: number = 10;
 }
+

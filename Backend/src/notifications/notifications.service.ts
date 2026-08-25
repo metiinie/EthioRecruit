@@ -19,7 +19,7 @@ export class NotificationsService {
     async markAsRead(id: string, userId: string) {
         const notification = await this.prisma.notification.updateMany({
             where: { id, userId },
-            data: { isRead: true, readAt: new Date() },
+            data: { isRead: true },
         });
         return { data: notification };
     }
@@ -27,7 +27,7 @@ export class NotificationsService {
     async markAllAsRead(userId: string) {
         await this.prisma.notification.updateMany({
             where: { userId, isRead: false },
-            data: { isRead: true, readAt: new Date() },
+            data: { isRead: true },
         });
         return { data: { message: 'All notifications marked as read' } };
     }
@@ -55,7 +55,7 @@ export class NotificationsService {
         if (!devices.length) return;
 
         const messages = devices.map((d) => ({
-            to: d.pushToken,
+            to: d.token,
             sound: 'default',
             title,
             body,

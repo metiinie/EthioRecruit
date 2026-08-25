@@ -51,8 +51,7 @@ export class InquiriesService {
             where: { id },
             data: {
                 status,
-                responseMessage: responseMessage || inquiry.responseMessage,
-                respondedAt: status === InquiryStatus.RESPONDED ? new Date() : inquiry.respondedAt,
+                adminResponse: responseMessage || inquiry.adminResponse,
             },
         });
 

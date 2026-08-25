@@ -14,7 +14,7 @@ import { LoginDto } from './dto/login.dto';
 import { OtpSendDto } from './dto/otp-send.dto';
 import { OtpVerifyDto } from './dto/otp-verify.dto';
 import { AdminLoginDto } from './dto/admin-login.dto';
-import { UserMode, OtpPurpose } from '@prisma/client';
+import { PreferredMode } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -47,7 +47,7 @@ export class AuthService {
         });
 
         // Auto-send OTP on registration
-        await this.generateAndSendOtp(dto.phone, OtpPurpose.registration);
+        await this.generateAndSendOtp(dto.phone, 'registration');
 
         const token = this.signUserToken(user.id, user.preferredMode);
 
@@ -87,7 +87,7 @@ export class AuthService {
 
     // ── OTP Send ───────────────────────────────────
     async sendOtp(dto: OtpSendDto) {
-        await this.generateAndSendOtp(dto.phone, dto.purpose || OtpPurpose.registration);
+        await this.generateAndSendOtp(dto.phone, dto.purpose || 'registration');
         return { data: { message: 'OTP sent successfully' } };
     }
 
@@ -132,7 +132,7 @@ export class AuthService {
     }
 
     // ── Mode Switch ────────────────────────────────
-    async switchMode(userId: string, mode: UserMode) {
+    async switchMode(userId: string, mode: PreferredMode) {
         const user = await this.prisma.user.update({
             where: { id: userId },
             data: { preferredMode: mode },
@@ -153,7 +153,7 @@ export class AuthService {
     async adminLogin(dto: AdminLoginDto) {
         const admin = await this.prisma.adminUser.findUnique({
             where: { email: dto.email },
-            include: { organization: true },
+            include: { agency: true },
         });
 
         if (!admin || !admin.isActive) {
@@ -165,7 +165,7 @@ export class AuthService {
             throw new UnauthorizedException('Invalid email or password');
         }
 
-        const token = this.signAdminToken(admin.id, admin.role, admin.organizationId);
+        const token = this.signAdminToken(admin.id, admin.role, admin.agencyId);
 
         return {
             data: {
@@ -175,11 +175,11 @@ export class AuthService {
                     firstName: admin.firstName,
                     lastName: admin.lastName,
                     role: admin.role,
-                    organizationId: admin.organizationId,
-                    organization: {
-                        id: admin.organization.id,
-                        name: admin.organization.name,
-                        logoUrl: admin.organization.logoUrl,
+                    agencyId: admin.agencyId,
+                    agency: {
+                        id: admin.agency.id,
+                        name: admin.agency.name,
+                        logoUrl: admin.agency.logoUrl,
                     },
                 },
                 token,
@@ -188,7 +188,7 @@ export class AuthService {
     }
 
     // ── Private Helpers ────────────────────────────
-    private signUserToken(userId: string, mode: UserMode): string {
+    private signUserToken(userId: string, mode: PreferredMode): string {
         return this.jwtService.sign(
             {
                 sub: userId,
@@ -217,7 +217,7 @@ export class AuthService {
         );
     }
 
-    private async generateAndSendOtp(phone: string, purpose: OtpPurpose): Promise<void> {
+    private async generateAndSendOtp(phone: string, purpose: string): Promise<void> {
         const code = Math.floor(100000 + Math.random() * 900000).toString();
         const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 

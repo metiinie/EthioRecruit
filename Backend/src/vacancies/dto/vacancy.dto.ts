@@ -5,23 +5,23 @@ import { VacancyStatus, EmployerType, GenderPreference } from '@prisma/client';
 export class CreateVacancyDto {
     @IsString()
     @IsNotEmpty()
-    categoryId: string;
+    categoryId!: string;
 
     @IsString()
     @IsNotEmpty()
-    title: string;
+    title!: string;
 
     @IsString()
     @IsNotEmpty()
-    description: string;
+    description!: string;
 
     @IsArray()
     @IsString({ each: true })
-    requirements: string[];
+    requirements!: string[];
 
     @IsString()
     @IsNotEmpty()
-    country: string;
+    country!: string;
 
     @IsString()
     @IsOptional()
@@ -99,9 +99,9 @@ export class CreateVacancyDto {
     @IsOptional()
     ageMax?: number;
 
-    @IsString()
+    @IsInt()
     @IsOptional()
-    experienceRequired?: string;
+    experienceRequired?: number = 0;
 
     @IsInt()
     @IsOptional()

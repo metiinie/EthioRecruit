@@ -1,12 +1,12 @@
-import { IsString, IsNotEmpty, IsEnum, IsOptional } from 'class-validator';
-import { OtpPurpose } from '@prisma/client';
+import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 
 export class OtpSendDto {
     @IsString()
     @IsNotEmpty()
-    phone: string;
+    phone!: string;
 
-    @IsEnum(OtpPurpose)
+    @IsString()
     @IsOptional()
-    purpose?: OtpPurpose = OtpPurpose.registration;
+    purpose?: string = 'registration';
 }
+
