@@ -58,6 +58,36 @@ export default function AdminLayout() {
                     ),
                 }}
             />
+            <Tabs.Screen
+                name="staff"
+                options={{
+                    title: 'Staff',
+                    tabBarIcon: ({ color, size }) => (
+                        <Ionicons name="people-circle" size={size} color={color} />
+                    ),
+                }}
+            />
+            <Tabs.Screen
+                name="settings"
+                options={{
+                    title: 'Settings',
+                    tabBarIcon: ({ color, size }) => (
+                        <Ionicons name="settings" size={size} color={color} />
+                    ),
+                }}
+            />
+            <Tabs.Screen
+                name="candidates/new"
+                options={{
+                    href: null,
+                }}
+            />
+            <Tabs.Screen
+                name="vacancies/new"
+                options={{
+                    href: null,
+                }}
+            />
         </Tabs>
     );
 }
