@@ -1,0 +1,41 @@
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+
+@Injectable()
+export class ApplicationsService {
+    constructor(private readonly prisma: PrismaService) { }
+
+    // User's own applications
+    async findMyApplications(userId: string) {
+        const applications = await this.prisma.application.findMany({
+            where: { userId },
+            include: {
+                vacancy: {
+                    include: {
+                        category: true,
+                        agency: { select: { id: true, name: true, logoUrl: true } },
+                    },
+                },
+                auditLogs: { orderBy: { createdAt: 'desc' }, take: 1 },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+        return { data: applications };
+    }
+
+    // Admin list applications for agency
+    async findAllAdmin(agencyId: string, status?: string) {
+        const where: any = { vacancy: { agencyId } };
+        if (status) where.status = status;
+
+        const applications = await this.prisma.application.findMany({
+            where,
+            include: {
+                user: { select: { id: true, firstName: true, lastName: true, phone: true, email: true } },
+                vacancy: { select: { id: true, title: true, country: true } },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+        return { data: applications };
+    }
+}
