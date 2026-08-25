@@ -1,0 +1,688 @@
+// ============================================
+// EthioHire — Prisma Schema
+// 21 Models · Multi-tenant · UUID PKs
+// ============================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum OrganizationType {
+  AGENCY
+  GULF_EMPLOYER
+}
+
+enum OrgMemberRole {
+  OWNER
+  ADMIN
+  RECRUITER
+  AGENT
+  HIRING_MANAGER
+  VIEWER
+}
+
+enum ContactChannelType {
+  whatsapp
+  telegram
+  imo
+  phone
+  email
+}
+
+enum UserMode {
+  JOB_SEEKER
+  EMPLOYER
+}
+
+enum OtpPurpose {
+  registration
+  password_reset
+  login
+}
+
+enum Gender {
+  male
+  female
+  other
+}
+
+enum MedicalStatus {
+  pending
+  cleared
+  failed
+  expired
+}
+
+enum VisaStatus {
+  no_visa
+  in_process
+  approved
+  expired
+}
+
+enum DocumentType {
+  passport
+  medical
+  coc
+  contract
+}
+
+enum DocumentStatus {
+  pending
+  verified
+  rejected
+  expired
+}
+
+enum VacancyStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  CLOSED
+  EXPIRED
+}
+
+enum EmployerType {
+  individual_family
+  corporate
+}
+
+enum GenderPreference {
+  any
+  male
+  female
+}
+
+enum ApplicationStatus {
+  APPLIED
+  UNDER_REVIEW
+  SHORTLISTED
+  SENT_TO_EMPLOYER
+  EMPLOYER_REVIEW
+  INTERVIEW
+  SELECTED
+  DOCUMENTATION
+  DEPLOYED
+  REJECTED
+  CANCELLED
+}
+
+enum InquiryStatus {
+  NEW
+  READ
+  RESPONDED
+  CLOSED
+}
+
+enum PipelineStage {
+  APPLIED
+  UNDER_REVIEW
+  SHORTLISTED
+  SENT_TO_EMPLOYER
+  EMPLOYER_REVIEW
+  INTERVIEW
+  SELECTED
+  DOCUMENTATION
+  DEPLOYED
+  CANCELLED
+}
+
+enum PipelineOutcome {
+  successful
+  cancelled
+  candidate_withdrew
+}
+
+enum PipelineDocumentType {
+  offer_letter
+  contract
+  medical_report
+  visa
+  flight_ticket
+}
+
+enum MessageSenderType {
+  user
+  agency
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+  STAFF
+}
+
+// ============================================
+// 1. ORGANISATION & TENANCY
+// ============================================
+
+model Organization {
+  id            String           @id @default(uuid())
+  name          String
+  type          OrganizationType
+  licenseNumber String?
+  logoUrl       String?
+  bannerUrl     String?
+  phone         String?
+  email         String?
+  country       String?
+  city          String?
+  address       String?
+  isVerified    Boolean          @default(false)
+  isActive      Boolean          @default(true)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  members          OrganizationMember[]
+  contactChannels  AgencyContactChannel[]
+  settings         AgencySetting?
+  candidates       Candidate[]
+  vacancies        JobVacancy[]
+  pipelines        HiringPipeline[]
+  conversations    Conversation[]
+  adminUsers       AdminUser[]
+
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id             String       @id @default(uuid())
+  organizationId String
+  userId         String
+  role           OrgMemberRole
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@unique([organizationId, userId])
+  @@map("organization_members")
+}
+
+model AgencyContactChannel {
+  id             String           @id @default(uuid())
+  organizationId String
+  channelType    ContactChannelType
+  channelValue   String
+  isPrimary      Boolean          @default(false)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@map("agency_contact_channels")
+}
+
+model AgencySetting {
+  id                       String   @id @default(uuid())
+  organizationId           String   @unique
+  allowInAppApplications   Boolean  @default(true)
+  showSalaryInVacancies    Boolean  @default(true)
+  notifyAdminOnNewInquiry  Boolean  @default(true)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@map("agency_settings")
+}
+
+// ============================================
+// 2. ADMIN USERS (Agency Staff)
+// ============================================
+
+model AdminUser {
+  id             String    @id @default(uuid())
+  organizationId String
+  email          String    @unique
+  password       String
+  firstName      String
+  lastName       String
+  role           AdminRole @default(ADMIN)
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@map("admin_users")
+}
+
+// ============================================
+// 3. MOBILE APP USERS
+// ============================================
+
+model User {
+  id              String   @id @default(uuid())
+  firstName       String
+  lastName        String
+  phone           String   @unique
+  email           String?  @unique
+  password        String
+  preferredMode   UserMode @default(JOB_SEEKER)
+  profilePhoto    String?
+  phoneVerified   Boolean  @default(false)
+  isPlatformAdmin Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  jobseekerProfile  JobseekerProfile?
+  employerProfile   EmployerProfile?
+  applications      Application[]
+  inquiries         CandidateInquiry[]
+  conversations     Conversation[]
+  notifications     Notification[]
+  savedCandidates   SavedCandidate[]
+  savedVacancies    SavedVacancy[]
+  deviceTokens      DeviceToken[]
+  memberships       OrganizationMember[]
+
+  @@map("users")
+}
+
+model JobseekerProfile {
+  id                           String   @id @default(uuid())
+  userId                       String   @unique
+  bio                          String?
+  currentCountry               String?
+  city                         String?
+  educationLevel               String?
+  yearsOfExperience            Int      @default(0)
+  hasOverseasExperience         Boolean  @default(false)
+  preferredDestinationCountries String[] @default([])
+  availabilityDate             DateTime?
+  skills                       Json?    @default("[]")
+  languages                    Json?    @default("[]")
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("jobseeker_profiles")
+}
+
+model EmployerProfile {
+  id          String       @id @default(uuid())
+  userId      String       @unique
+  companyName String?
+  companyType EmployerType?
+  country     String?
+  city        String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("employer_profiles")
+}
+
+model DeviceToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  platform  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("device_tokens")
+}
+
+model OtpVerification {
+  id        String     @id @default(uuid())
+  phone     String
+  code      String
+  purpose   OtpPurpose
+  expiresAt DateTime
+  verified  Boolean    @default(false)
+  createdAt DateTime   @default(now())
+
+  @@index([phone, purpose])
+  @@map("otp_verifications")
+}
+
+// ============================================
+// 4. CANDIDATES DOMAIN
+// ============================================
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  icon        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  candidates Candidate[]
+  vacancies  JobVacancy[]
+
+  @@map("categories")
+}
+
+model Candidate {
+  id                   String        @id @default(uuid())
+  agencyId             String
+  categoryId           String
+  firstName            String
+  lastName             String
+  dateOfBirth          DateTime?
+  gender               Gender
+  nationality          String        @default("Ethiopian")
+  religion             String?
+  maritalStatus        String?
+  summary              String?
+  educationLevel       String?
+  yearsOfExperience    Int           @default(0)
+  currentCountry       String?
+  currentCity          String?
+  medicalStatus        MedicalStatus @default(pending)
+  medicalClearanceDate DateTime?
+  medicalExpiryDate    DateTime?
+  visaStatus           VisaStatus    @default(no_visa)
+  photoUrl             String?
+  videoUrl             String?
+  videoThumbnail       String?
+  isFeatured           Boolean       @default(false)
+  isAvailable          Boolean       @default(true)
+  isPublished          Boolean       @default(false)
+  skills               String[]      @default([])
+  languages            String[]      @default([])
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  agency    Organization        @relation(fields: [agencyId], references: [id])
+  category  Category            @relation(fields: [categoryId], references: [id])
+  documents CandidateDocument[]
+  views     CandidateView?
+  inquiries CandidateInquiry[]
+  saved     SavedCandidate[]
+  pipelines HiringPipeline[]
+
+  @@index([agencyId, isAvailable, isPublished])
+  @@index([medicalStatus, categoryId, currentCountry])
+  @@map("candidates")
+}
+
+model CandidateDocument {
+  id          String         @id @default(uuid())
+  candidateId String
+  type        DocumentType
+  status      DocumentStatus @default(pending)
+  url         String
+  fileName    String?
+  notes       String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  candidate Candidate @relation(fields: [candidateId], references: [id])
+
+  @@map("candidate_documents")
+}
+
+model CandidateView {
+  id          String   @id @default(uuid())
+  candidateId String   @unique
+  viewCount   Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  candidate Candidate @relation(fields: [candidateId], references: [id])
+
+  @@map("candidate_views")
+}
+
+// ============================================
+// 5. JOB VACANCIES DOMAIN
+// ============================================
+
+model JobVacancy {
+  id                      String           @id @default(uuid())
+  agencyId                String
+  categoryId              String
+  title                   String
+  description             String
+  requirements            String[]         @default([])
+  country                 String
+  city                    String?
+  employerType            EmployerType?
+  employerName            String?
+  showEmployerName        Boolean          @default(false)
+  salaryMin               Decimal?
+  salaryMax               Decimal?
+  salaryCurrency          String           @default("USD")
+  contractPeriodYears     Int              @default(2)
+  workingHoursPerDay      Int?
+  workingDaysPerWeek      Int?
+  visaSponsorship         Boolean          @default(false)
+  accommodationProvided   Boolean          @default(false)
+  mealsProvided           Boolean          @default(false)
+  transportationProvided  Boolean          @default(false)
+  healthInsurance         Boolean          @default(false)
+  annualLeaveDays         Int              @default(30)
+  genderPreference        GenderPreference @default(any)
+  ageMin                  Int?
+  ageMax                  Int?
+  experienceRequired      String?
+  vacanciesCount          Int              @default(1)
+  applicationDeadline     DateTime?
+  status                  VacancyStatus    @default(DRAFT)
+  publishedAt             DateTime?
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
+
+  agency       Organization   @relation(fields: [agencyId], references: [id])
+  category     Category       @relation(fields: [categoryId], references: [id])
+  applications Application[]
+  views        VacancyView?
+  saved        SavedVacancy[]
+
+  @@index([agencyId, status])
+  @@index([categoryId, country, status])
+  @@map("job_vacancies")
+}
+
+model VacancyView {
+  id        String   @id @default(uuid())
+  vacancyId String   @unique
+  viewCount Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  vacancy JobVacancy @relation(fields: [vacancyId], references: [id])
+
+  @@map("vacancy_views")
+}
+
+// ============================================
+// 6. APPLICATIONS & INQUIRIES
+// ============================================
+
+model Application {
+  id              String            @id @default(uuid())
+  vacancyId       String
+  userId          String
+  status          ApplicationStatus @default(APPLIED)
+  coverLetter     String?
+  additionalNotes String?
+  reviewerNotes   String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  vacancy JobVacancy @relation(fields: [vacancyId], references: [id])
+  user    User       @relation(fields: [userId], references: [id])
+
+  @@unique([vacancyId, userId])
+  @@map("applications")
+}
+
+model CandidateInquiry {
+  id                     String        @id @default(uuid())
+  candidateId            String
+  userId                 String
+  message                String
+  preferredContactChannel ContactChannelType?
+  purpose                String?
+  requiredStartDate      DateTime?
+  status                 InquiryStatus @default(NEW)
+  adminResponse          String?
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+
+  candidate Candidate @relation(fields: [candidateId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@map("candidate_inquiries")
+}
+
+// ============================================
+// 7. BOOKMARKS
+// ============================================
+
+model SavedCandidate {
+  id          String   @id @default(uuid())
+  userId      String
+  candidateId String
+  createdAt   DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id])
+  candidate Candidate @relation(fields: [candidateId], references: [id])
+
+  @@unique([userId, candidateId])
+  @@map("saved_candidates")
+}
+
+model SavedVacancy {
+  id        String   @id @default(uuid())
+  userId    String
+  vacancyId String
+  createdAt DateTime @default(now())
+
+  user    User       @relation(fields: [userId], references: [id])
+  vacancy JobVacancy @relation(fields: [vacancyId], references: [id])
+
+  @@unique([userId, vacancyId])
+  @@map("saved_vacancies")
+}
+
+// ============================================
+// 8. HIRING PIPELINE
+// ============================================
+
+model HiringPipeline {
+  id                     String          @id @default(uuid())
+  agencyId               String
+  candidateId            String
+  employerName           String?
+  employerCountry        String?
+  employerCity           String?
+  employerContact        String?
+  currentStage           PipelineStage   @default(APPLIED)
+  isActive               Boolean         @default(true)
+  expectedDeploymentDate DateTime?
+  actualDeploymentDate   DateTime?
+  outcome                PipelineOutcome?
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+
+  agency       Organization         @relation(fields: [agencyId], references: [id])
+  candidate    Candidate            @relation(fields: [candidateId], references: [id])
+  stageHistory PipelineStageHistory[]
+  documents    PipelineDocument[]
+
+  @@index([agencyId, currentStage])
+  @@map("hiring_pipelines")
+}
+
+model PipelineStageHistory {
+  id           String        @id @default(uuid())
+  pipelineId   String
+  stage        PipelineStage
+  enteredAt    DateTime      @default(now())
+  exitedAt     DateTime?
+  durationDays Int?
+  notes        String?
+  updatedBy    String?
+  createdAt    DateTime      @default(now())
+
+  pipeline HiringPipeline @relation(fields: [pipelineId], references: [id])
+
+  @@map("pipeline_stage_history")
+}
+
+model PipelineDocument {
+  id         String               @id @default(uuid())
+  pipelineId String
+  type       PipelineDocumentType
+  url        String
+  fileName   String?
+  uploadedAt DateTime             @default(now())
+
+  pipeline HiringPipeline @relation(fields: [pipelineId], references: [id])
+
+  @@map("pipeline_documents")
+}
+
+// ============================================
+// 9. CONVERSATIONS & MESSAGING
+// ============================================
+
+model Conversation {
+  id             String   @id @default(uuid())
+  userId         String
+  organizationId String
+  lastMessageAt  DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user         User         @relation(fields: [userId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
+  messages     Message[]
+
+  @@unique([userId, organizationId])
+  @@map("conversations")
+}
+
+model Message {
+  id             String            @id @default(uuid())
+  conversationId String
+  senderType     MessageSenderType
+  senderId       String
+  text           String?
+  attachmentUrl  String?
+  isRead         Boolean           @default(false)
+  createdAt      DateTime          @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
+
+// ============================================
+// 10. NOTIFICATIONS
+// ============================================
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  body      String
+  data      Json?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
