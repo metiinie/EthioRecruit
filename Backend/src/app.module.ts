@@ -14,6 +14,9 @@ import { AgenciesModule } from './agencies/agencies.module';
 import { SettingsModule } from './settings/settings.module';
 import { StaffModule } from './staff/staff.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { SavedModule } from './saved/saved.module';
+import { MediaModule } from './media/media.module';
+import { ConversationsModule } from './conversations/conversations.module';
 
 @Module({
     imports: [
@@ -44,6 +47,9 @@ import { NotificationsModule } from './notifications/notifications.module';
         SettingsModule,
         StaffModule,
         NotificationsModule,
+        SavedModule,
+        MediaModule,
+        ConversationsModule,
     ],
     providers: [
         {
