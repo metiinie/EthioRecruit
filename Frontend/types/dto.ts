@@ -1,5 +1,6 @@
 export interface CandidateFiltersDto {
     categoryId?: string;
+    search?: string;
     experienceYears?: number;
     religion?: string;
     gender?: string;
@@ -13,6 +14,7 @@ export interface CandidateFiltersDto {
 
 export interface VacancyFiltersDto {
     categoryId?: string;
+    search?: string;
     country?: string;
     salaryMin?: number;
     status?: string;
