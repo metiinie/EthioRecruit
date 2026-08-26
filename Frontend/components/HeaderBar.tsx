@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, BorderRadius, Spacing } from '../constants';
 import { useLanguageStore } from '../stores/languageStore';
 import { LanguageModal } from './LanguageModal';
-import { NotificationModal } from './NotificationModal';
 import { useQuery } from '@tanstack/react-query';
 import { notificationService } from '../services/notificationService';
 
@@ -21,8 +21,8 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
     showGreeting,
     userName,
 }) => {
+    const router = useRouter();
     const [langModalVisible, setLangModalVisible] = useState(false);
-    const [notifModalVisible, setNotifModalVisible] = useState(false);
 
     const { getCurrentLanguageOption } = useLanguageStore();
     const currentLang = getCurrentLanguageOption();
@@ -69,10 +69,10 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
                         <Text style={styles.langCodeText}>{currentLang.code.toUpperCase()}</Text>
                     </TouchableOpacity>
 
-                    {/* Notification Bell Button */}
+                    {/* Notification Bell Button -> Navigates to full notifications screen */}
                     <TouchableOpacity
                         style={styles.actionIconButton}
-                        onPress={() => setNotifModalVisible(true)}
+                        onPress={() => router.push('/notifications' as any)}
                         activeOpacity={0.7}
                     >
                         <Ionicons name="notifications-outline" size={22} color={Colors.gray800} />
@@ -87,14 +87,10 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
                 </View>
             </View>
 
-            {/* Modals */}
+            {/* Language Modal */}
             <LanguageModal
                 visible={langModalVisible}
                 onClose={() => setLangModalVisible(false)}
-            />
-            <NotificationModal
-                visible={notifModalVisible}
-                onClose={() => setNotifModalVisible(false)}
             />
         </>
     );

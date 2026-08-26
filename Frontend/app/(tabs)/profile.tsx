@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, LinkedState } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius } from '../../constants';
@@ -70,7 +70,7 @@ export default function ProfileScreen() {
                     <Text style={styles.name}>
                         {user?.firstName} {user?.lastName}
                     </Text>
-                    <Text style={styles.phone}>{user?.phone}</Text>
+                    <Text style={styles.phone}>{user?.phone || '+251 900 000 000'}</Text>
 
                     <View style={styles.roleBadge}>
                         <Ionicons
@@ -94,6 +94,17 @@ export default function ProfileScreen() {
                             Switch to {isJobSeeker ? 'Employer' : 'Job Seeker'} Mode
                         </Text>
                     </TouchableOpacity>
+                </View>
+
+                {/* Account Status Card */}
+                <View style={styles.statusCard}>
+                    <View style={styles.statusIconCircle}>
+                        <Ionicons name="shield-checkmark" size={20} color={Colors.accent} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.statusTitle}>Verified Account</Text>
+                        <Text style={styles.statusSub}>Licensed & Compliant Overseas Hiring Platform</Text>
+                    </View>
                 </View>
 
                 {/* Account Actions Section */}
@@ -134,7 +145,7 @@ export default function ProfileScreen() {
                             </View>
                             <View>
                                 <Text style={styles.menuLabel}>Notifications Center</Text>
-                                <Text style={styles.menuSubLabel}>View messages & updates</Text>
+                                <Text style={styles.menuSubLabel}>View messages & system alerts</Text>
                             </View>
                         </View>
                         <Ionicons name="chevron-forward" size={18} color={Colors.gray400} />
@@ -142,10 +153,8 @@ export default function ProfileScreen() {
 
                     {/* Saved Candidates / Vacancies */}
                     <TouchableOpacity
-                        style={[styles.menuItem, styles.menuBorder]}
-                        onPress={() =>
-                            router.push((isJobSeeker ? '/saved/vacancies' : '/saved/candidates') as any)
-                        }
+                        style={styles.menuItem}
+                        onPress={() => router.push('/(tabs)/saved' as any)}
                         activeOpacity={0.7}
                     >
                         <View style={styles.menuLeft}>
@@ -156,7 +165,48 @@ export default function ProfileScreen() {
                                 <Text style={styles.menuLabel}>
                                     {isJobSeeker ? 'Saved Vacancies' : 'Saved Candidates'}
                                 </Text>
-                                <Text style={styles.menuSubLabel}>Bookmarked profiles</Text>
+                                <Text style={styles.menuSubLabel}>Manage your bookmarked roster</Text>
+                            </View>
+                        </View>
+                        <Ionicons name="chevron-forward" size={18} color={Colors.gray400} />
+                    </TouchableOpacity>
+                </View>
+
+                {/* Support & Legal Section */}
+                <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>Support & Assistance</Text>
+                </View>
+
+                <View style={styles.menuCard}>
+                    <TouchableOpacity
+                        style={[styles.menuItem, styles.menuBorder]}
+                        onPress={() => Alert.alert('Support', 'Contact EthioRecruit Support via support@ethiorecruit.com')}
+                        activeOpacity={0.7}
+                    >
+                        <View style={styles.menuLeft}>
+                            <View style={[styles.menuIconCircle, { backgroundColor: Colors.primary + '15' }]}>
+                                <Ionicons name="help-buoy-outline" size={18} color={Colors.primary} />
+                            </View>
+                            <View>
+                                <Text style={styles.menuLabel}>Help & Support</Text>
+                                <Text style={styles.menuSubLabel}>FAQs & Customer Care</Text>
+                            </View>
+                        </View>
+                        <Ionicons name="chevron-forward" size={18} color={Colors.gray400} />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.menuItem}
+                        onPress={() => Alert.alert('EthioRecruit v2.0', 'Licensed Foreign Employment Agency Platform')}
+                        activeOpacity={0.7}
+                    >
+                        <View style={styles.menuLeft}>
+                            <View style={[styles.menuIconCircle, { backgroundColor: Colors.gray200 }]}>
+                                <Ionicons name="information-circle-outline" size={18} color={Colors.gray700} />
+                            </View>
+                            <View>
+                                <Text style={styles.menuLabel}>About EthioRecruit</Text>
+                                <Text style={styles.menuSubLabel}>Version 2.0.0 • Overseas Hiring</Text>
                             </View>
                         </View>
                         <Ionicons name="chevron-forward" size={18} color={Colors.gray400} />
@@ -195,7 +245,7 @@ const styles = StyleSheet.create({
         borderRadius: BorderRadius.xl,
         padding: Spacing.xl,
         alignItems: 'center',
-        marginBottom: Spacing.lg,
+        marginBottom: Spacing.md,
         borderWidth: 1,
         borderColor: Colors.gray200,
         shadowColor: '#000',
@@ -244,8 +294,32 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     modeToggleText: { fontSize: 13, fontWeight: '700', color: Colors.white },
+
+    /* Status Card */
+    statusCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: Colors.white,
+        borderRadius: BorderRadius.xl,
+        padding: Spacing.md,
+        gap: 12,
+        marginBottom: Spacing.lg,
+        borderWidth: 1,
+        borderColor: Colors.accent + '30',
+    },
+    statusIconCircle: {
+        width: 38,
+        height: 38,
+        borderRadius: 19,
+        backgroundColor: Colors.accent + '15',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    statusTitle: { fontSize: 14, fontWeight: '800', color: Colors.gray900 },
+    statusSub: { fontSize: 12, color: Colors.gray500, marginTop: 1 },
+
     sectionHeader: { marginBottom: Spacing.xs },
-    sectionTitle: { fontSize: 14, fontWeight: '700', color: Colors.gray500, textTransform: 'uppercase', letterSpacing: 0.5 },
+    sectionTitle: { fontSize: 13, fontWeight: '700', color: Colors.gray500, textTransform: 'uppercase', letterSpacing: 0.5 },
     menuCard: {
         backgroundColor: Colors.white,
         borderRadius: BorderRadius.xl,
