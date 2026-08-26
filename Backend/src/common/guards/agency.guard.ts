@@ -1,4 +1,4 @@
-import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -10,10 +10,10 @@ export class AgencyGuard implements CanActivate {
         const user = request.user;
 
         if (!user) {
-            return false;
+            throw new ForbiddenException('User authentication context required.');
         }
 
-        // 1. Check direct agency_id property (from AdminJwtStrategy)
+        // 1. Check direct agency_id / agencyId property (from AdminJwtStrategy)
         if (user.agency_id) {
             request.agencyId = user.agency_id;
             return true;
@@ -49,16 +49,6 @@ export class AgencyGuard implements CanActivate {
             }
         }
 
-        // 3. Fallback to default active agency/organization in system
-        const defaultOrg = await this.prisma.organization.findFirst({
-            where: { isActive: true },
-        });
-
-        if (defaultOrg) {
-            request.agencyId = defaultOrg.id;
-            return true;
-        }
-
-        return false;
+        throw new ForbiddenException('Agency context required. User is not associated with an active agency workspace.');
     }
 }

@@ -13,14 +13,14 @@ const getBaseUrl = (): string => {
         }
     }
 
-    // 2. Explicit environment variable if valid and not stale IP
+    // 2. Explicit environment variable
     const envUrl = process.env.EXPO_PUBLIC_API_URL;
-    if (envUrl && !envUrl.includes('10.78.243.80')) {
+    if (envUrl) {
         return envUrl;
     }
 
-    // 3. Current active network fallback
-    return 'http://10.103.196.169:3000/v1';
+    // 3. Fallback to localhost
+    return 'http://localhost:3000/v1';
 };
 
 export const API_URL = getBaseUrl();

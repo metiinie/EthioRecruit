@@ -6,7 +6,13 @@ interface AdminUser {
     firstName: string;
     lastName: string;
     role: 'SUPER_ADMIN' | 'ADMIN' | 'STAFF';
-    organizationId: string;
+    agencyId?: string;
+    organizationId?: string;
+    agency?: {
+        id: string;
+        name: string;
+        logoUrl?: string | null;
+    };
     organization?: {
         id: string;
         name: string;
@@ -36,7 +42,7 @@ export const useAdminAuthStore = create<AdminAuthState>((set) => ({
         set({
             admin,
             adminToken: token,
-            agencyId: admin.organizationId,
+            agencyId: admin.agencyId || admin.organizationId || null,
             role: admin.role,
             isAdminAuthenticated: true,
         }),
