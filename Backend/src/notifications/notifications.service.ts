@@ -54,7 +54,13 @@ export class NotificationsService {
         const devices = await this.prisma.deviceToken.findMany({ where: { userId } });
         if (!devices.length) return;
 
-        const messages = devices.map((d) => ({
+        const validDevices = devices.filter((d) =>
+            d.token && typeof d.token === 'string' &&
+            (d.token.startsWith('ExponentPushToken[') || d.token.startsWith('ExpoPushToken['))
+        );
+        if (!validDevices.length) return;
+
+        const messages = validDevices.map((d) => ({
             to: d.token,
             sound: 'default',
             title,
