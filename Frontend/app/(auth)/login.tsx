@@ -16,12 +16,14 @@ import { Colors, Spacing, BorderRadius } from '../../constants';
 import { authService } from '../../services/authService';
 import { getErrorMessage } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
+import { useAdminAuthStore } from '../../stores/adminAuthStore';
 
 export default function LoginScreen() {
     const router = useRouter();
     const setAuth = useAuthStore((s) => s.setAuth);
+    const setAdminAuth = useAdminAuthStore((s) => s.setAdminAuth);
 
-    const [phone, setPhone] = useState('');
+    const [identifier, setIdentifier] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -36,17 +38,44 @@ export default function LoginScreen() {
     };
 
     const handleLogin = async () => {
-        if (!phone.trim() || !password) {
+        if (!identifier.trim() || !password) {
             Alert.alert('Missing Fields', 'Please fill in all fields');
             return;
         }
 
         setLoading(true);
         try {
-            const formattedPhone = sanitizePhone(phone);
-            const response = await authService.login({ phone: formattedPhone, password });
-            setAuth(response.data.user, response.data.token);
-            router.replace('/(tabs)');
+            const isEmail = identifier.includes('@');
+            const cleanInput = identifier.trim();
+            const payload: any = { password };
+
+            if (isEmail) {
+                payload.email = cleanInput.toLowerCase();
+                payload.phone = cleanInput.toLowerCase();
+                payload.identifier = cleanInput.toLowerCase();
+            } else {
+                const formattedPhone = sanitizePhone(cleanInput);
+                payload.phone = formattedPhone;
+                payload.identifier = formattedPhone;
+            }
+
+            const response = await authService.login(payload);
+            const user = response.data.user;
+            const token = response.data.token;
+            const adminData = response.data.admin;
+
+            setAuth(user, token);
+
+            if (adminData) {
+                setAdminAuth(adminData, token);
+            }
+
+            // Redirect Platform Admin or Agency Admin to /(admin)
+            if (user?.isPlatformAdmin || adminData) {
+                router.replace('/(admin)');
+            } else {
+                router.replace('/(tabs)');
+            }
         } catch (error: any) {
             const msg = getErrorMessage(error);
             Alert.alert('Login Failed', msg);
@@ -70,16 +99,17 @@ export default function LoginScreen() {
 
                 <View style={styles.form}>
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Phone Number</Text>
+                        <Text style={styles.label}>Phone Number or Email</Text>
                         <View style={styles.inputRow}>
-                            <Text style={styles.prefix}>+251</Text>
+                            <Ionicons name="person-outline" size={20} color={Colors.gray400} style={{ marginRight: 8 }} />
                             <TextInput
                                 style={styles.input}
-                                placeholder="912345678"
+                                placeholder="0912345678 or admin@ethiorecruit.com"
                                 placeholderTextColor={Colors.gray500}
-                                keyboardType="phone-pad"
-                                value={phone}
-                                onChangeText={setPhone}
+                                keyboardType="email-address"
+                                autoCapitalize="none"
+                                value={identifier}
+                                onChangeText={setIdentifier}
                             />
                         </View>
                     </View>
@@ -130,6 +160,7 @@ export default function LoginScreen() {
         </KeyboardAvoidingView>
     );
 }
+
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: Colors.primary },

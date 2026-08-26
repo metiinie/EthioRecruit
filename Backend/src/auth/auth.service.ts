@@ -47,7 +47,7 @@ export class AuthService {
         });
 
         // Auto-send OTP on registration
-        await this.generateAndSendOtp(dto.phone, 'registration');
+        const code = await this.generateAndSendOtp(dto.phone, 'registration');
 
         const token = this.signUserToken(user.id, user.preferredMode);
 
@@ -55,24 +55,54 @@ export class AuthService {
             data: {
                 user: this.sanitizeUser(user),
                 token,
+                devOtp: code,
             },
         };
     }
 
-    // ── User Login ─────────────────────────────────
+    // ── User Login (Phone or Email) ────────────────
     async login(dto: LoginDto) {
-        const user = await this.prisma.user.findUnique({
-            where: { phone: dto.phone },
+        const rawInput = dto.identifier || dto.phone || dto.email || '';
+        const { isEmail, phoneFormatted, rawPhone, email } = this.resolveIdentifier(rawInput);
+
+        if (!rawInput) {
+            throw new BadRequestException('Phone number or email is required');
+        }
+
+        const user = await this.prisma.user.findFirst({
+            where: isEmail
+                ? { email }
+                : { OR: [{ phone: phoneFormatted }, { phone: rawPhone }] },
             include: { jobseekerProfile: true, employerProfile: true },
         });
 
         if (!user) {
-            throw new UnauthorizedException('Invalid phone or password');
+            throw new UnauthorizedException('Invalid phone/email or password');
         }
 
         const isPasswordValid = await bcrypt.compare(dto.password, user.password);
         if (!isPasswordValid) {
-            throw new UnauthorizedException('Invalid phone or password');
+            throw new UnauthorizedException('Invalid phone/email or password');
+        }
+
+        // Check if user has an associated AdminUser profile
+        let adminProfile = null;
+        if (user.email || isEmail) {
+            const adminUser = await this.prisma.adminUser.findFirst({
+                where: { email: user.email || email },
+                include: { agency: true },
+            });
+            if (adminUser) {
+                adminProfile = {
+                    id: adminUser.id,
+                    email: adminUser.email,
+                    firstName: adminUser.firstName,
+                    lastName: adminUser.lastName,
+                    role: adminUser.role,
+                    agencyId: adminUser.agencyId,
+                    agency: adminUser.agency,
+                };
+            }
         }
 
         const token = this.signUserToken(user.id, user.preferredMode);
@@ -81,14 +111,15 @@ export class AuthService {
             data: {
                 user: this.sanitizeUser(user),
                 token,
+                admin: adminProfile,
             },
         };
     }
 
     // ── OTP Send ───────────────────────────────────
     async sendOtp(dto: OtpSendDto) {
-        await this.generateAndSendOtp(dto.phone, dto.purpose || 'registration');
-        return { data: { message: 'OTP sent successfully' } };
+        const code = await this.generateAndSendOtp(dto.phone, dto.purpose || 'registration');
+        return { data: { message: 'OTP sent successfully', devOtp: code } };
     }
 
     // ── OTP Verify ─────────────────────────────────
@@ -149,20 +180,40 @@ export class AuthService {
         };
     }
 
-    // ── Admin Login ────────────────────────────────
+    // ── Admin Login (Email or Phone) ───────────────
     async adminLogin(dto: AdminLoginDto) {
-        const admin = await this.prisma.adminUser.findUnique({
-            where: { email: dto.email },
+        const rawInput = dto.identifier || dto.email || dto.phone || '';
+        const { isEmail, phoneFormatted, rawPhone, email } = this.resolveIdentifier(rawInput);
+
+        if (!rawInput) {
+            throw new BadRequestException('Email or phone number is required');
+        }
+
+        let admin = await this.prisma.adminUser.findFirst({
+            where: isEmail ? { email } : undefined,
             include: { agency: true },
         });
 
+        // If not found by email, check if there's a User with this phone whose email matches an AdminUser
+        if (!admin && !isEmail) {
+            const user = await this.prisma.user.findFirst({
+                where: { OR: [{ phone: phoneFormatted }, { phone: rawPhone }] },
+            });
+            if (user && user.email) {
+                admin = await this.prisma.adminUser.findFirst({
+                    where: { email: user.email },
+                    include: { agency: true },
+                });
+            }
+        }
+
         if (!admin || !admin.isActive) {
-            throw new UnauthorizedException('Invalid email or password');
+            throw new UnauthorizedException('Invalid credentials or inactive admin account');
         }
 
         const isPasswordValid = await bcrypt.compare(dto.password, admin.password);
         if (!isPasswordValid) {
-            throw new UnauthorizedException('Invalid email or password');
+            throw new UnauthorizedException('Invalid email/phone or password');
         }
 
         const token = this.signAdminToken(admin.id, admin.role, admin.agencyId);
@@ -188,6 +239,26 @@ export class AuthService {
     }
 
     // ── Private Helpers ────────────────────────────
+    private resolveIdentifier(rawInput: string) {
+        const trimmed = (rawInput || '').trim();
+        if (!trimmed) {
+            return { isEmail: false, phoneFormatted: '', rawPhone: '', email: '' };
+        }
+
+        if (trimmed.includes('@')) {
+            return { isEmail: true, phoneFormatted: '', rawPhone: '', email: trimmed.toLowerCase() };
+        }
+
+        let digits = trimmed.replace(/\D/g, '');
+        if (digits.startsWith('251')) {
+            digits = digits.slice(3);
+        }
+        digits = digits.replace(/^0+/, '');
+        const phoneFormatted = `+251${digits}`;
+
+        return { isEmail: false, phoneFormatted, rawPhone: trimmed, email: '' };
+    }
+
     private signUserToken(userId: string, mode: PreferredMode): string {
         return this.jwtService.sign(
             {
@@ -217,7 +288,7 @@ export class AuthService {
         );
     }
 
-    private async generateAndSendOtp(phone: string, purpose: string): Promise<void> {
+    private async generateAndSendOtp(phone: string, purpose: string): Promise<string> {
         const code = Math.floor(100000 + Math.random() * 900000).toString();
         const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
@@ -230,9 +301,20 @@ export class AuthService {
             },
         });
 
-        // TODO: Integrate SMSEthiopia HTTP API
-        this.logger.log(`[DEV] OTP for ${phone}: ${code}`);
+        const devBanner = `
+=============================================================
+  🔑 [DEV OTP VERIFICATION CODE]
+  Phone:   ${phone}
+  Purpose: ${purpose}
+  CODE:    ${code}
+=============================================================
+`;
+        console.log(devBanner);
+        this.logger.log(`[DEV] OTP for ${phone} (${purpose}): ${code}`);
+
+        return code;
     }
+
 
     private sanitizeUser(user: any) {
         const { password, ...rest } = user;

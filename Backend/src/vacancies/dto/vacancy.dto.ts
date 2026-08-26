@@ -12,6 +12,10 @@ export class CreateVacancyDto {
     title!: string;
 
     @IsString()
+    @IsOptional()
+    jobCode?: string;
+
+    @IsString()
     @IsNotEmpty()
     description!: string;
 
@@ -27,6 +31,10 @@ export class CreateVacancyDto {
     @IsOptional()
     city?: string;
 
+    @IsString()
+    @IsOptional()
+    targetRegion?: string;
+
     @IsEnum(EmployerType)
     @IsOptional()
     employerType?: EmployerType;
@@ -39,6 +47,10 @@ export class CreateVacancyDto {
     @IsOptional()
     showEmployerName?: boolean = true;
 
+    @IsString()
+    @IsOptional()
+    foreignAgencyPartner?: string;
+
     @IsNumber()
     @IsOptional()
     salaryMin?: number;
@@ -49,7 +61,15 @@ export class CreateVacancyDto {
 
     @IsString()
     @IsOptional()
-    salaryCurrency?: string = 'ETB';
+    salaryCurrency?: string = 'SAR';
+
+    @IsString()
+    @IsOptional()
+    overtimeTerms?: string;
+
+    @IsString()
+    @IsOptional()
+    placementFeeTerms?: string;
 
     @IsInt()
     @IsOptional()
@@ -57,11 +77,19 @@ export class CreateVacancyDto {
 
     @IsInt()
     @IsOptional()
-    workingHoursPerDay?: number;
+    probationPeriodMonths?: number = 3;
 
     @IsInt()
     @IsOptional()
-    workingDaysPerWeek?: number;
+    workingHoursPerDay?: number = 8;
+
+    @IsInt()
+    @IsOptional()
+    workingDaysPerWeek?: number = 6;
+
+    @IsInt()
+    @IsOptional()
+    offDaysPerMonth?: number = 4;
 
     @IsBoolean()
     @IsOptional()
@@ -83,6 +111,10 @@ export class CreateVacancyDto {
     @IsOptional()
     healthInsurance?: boolean = true;
 
+    @IsBoolean()
+    @IsOptional()
+    flightTicketProvided?: boolean = true;
+
     @IsInt()
     @IsOptional()
     annualLeaveDays?: number = 30;
@@ -90,6 +122,10 @@ export class CreateVacancyDto {
     @IsEnum(GenderPreference)
     @IsOptional()
     genderPreference?: GenderPreference = GenderPreference.any;
+
+    @IsString()
+    @IsOptional()
+    religionPreference?: string = 'any';
 
     @IsInt()
     @IsOptional()
@@ -102,6 +138,29 @@ export class CreateVacancyDto {
     @IsInt()
     @IsOptional()
     experienceRequired?: number = 0;
+
+    @IsBoolean()
+    @IsOptional()
+    overseasExpRequired?: boolean = false;
+
+    @IsString()
+    @IsOptional()
+    educationLevelRequired?: string;
+
+    @IsArray()
+    @IsString({ each: true })
+    @IsOptional()
+    requiredSkills?: string[] = [];
+
+    @IsArray()
+    @IsString({ each: true })
+    @IsOptional()
+    requiredLanguages?: string[] = [];
+
+    @IsArray()
+    @IsString({ each: true })
+    @IsOptional()
+    requiredCertificates?: string[] = [];
 
     @IsInt()
     @IsOptional()
@@ -146,3 +205,4 @@ export class VacancyFiltersDto {
     @Type(() => Number)
     perPage?: number = 10;
 }
+

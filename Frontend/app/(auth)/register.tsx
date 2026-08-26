@@ -72,7 +72,7 @@ export default function RegisterScreen() {
             setAuth(response.data.user, response.data.token);
             router.replace({
                 pathname: '/(auth)/otp',
-                params: { phone: formattedPhone },
+                params: { phone: formattedPhone, devOtp: response.data?.devOtp },
             });
         } catch (error: any) {
             const msg = getErrorMessage(error);

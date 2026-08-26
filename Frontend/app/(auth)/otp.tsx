@@ -16,12 +16,13 @@ import { useAuthStore } from '../../stores/authStore';
 
 export default function OtpScreen() {
     const router = useRouter();
-    const params = useLocalSearchParams<{ phone: string }>();
+    const params = useLocalSearchParams<{ phone: string; devOtp?: string }>();
     const setAuth = useAuthStore((s) => s.setAuth);
 
     const [code, setCode] = useState(['', '', '', '', '', '']);
     const [loading, setLoading] = useState(false);
     const [countdown, setCountdown] = useState(60);
+    const [devOtp, setDevOtp] = useState<string | undefined>(params.devOtp);
     const inputs = useRef<(TextInput | null)[]>([]);
 
     useEffect(() => {
@@ -76,7 +77,10 @@ export default function OtpScreen() {
 
     const handleResend = async () => {
         try {
-            await authService.sendOtp(params.phone!);
+            const res = await authService.sendOtp(params.phone!);
+            if (res.data?.devOtp) {
+                setDevOtp(res.data.devOtp);
+            }
             setCountdown(60);
             Alert.alert('Success', 'OTP resent successfully');
         } catch (error: any) {
@@ -100,6 +104,13 @@ export default function OtpScreen() {
                 Enter the 6-digit code sent to{'\n'}
                 <Text style={styles.phone}>{params.phone}</Text>
             </Text>
+
+            {devOtp ? (
+                <View style={styles.devBox}>
+                    <Ionicons name="key-outline" size={16} color={Colors.accent} />
+                    <Text style={styles.devBoxText}>Dev Code: <Text style={styles.devCodeHighlight}>{devOtp}</Text></Text>
+                </View>
+            ) : null}
 
             <View style={styles.codeRow}>
                 {code.map((digit, i) => (
@@ -166,6 +177,22 @@ const styles = StyleSheet.create({
     title: { fontSize: 26, fontWeight: '800', color: Colors.white, textAlign: 'center' },
     subtitle: { fontSize: 15, color: Colors.gray400, textAlign: 'center', marginTop: 8, lineHeight: 22 },
     phone: { color: Colors.accent, fontWeight: '700' },
+    devBox: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        backgroundColor: Colors.primaryLight,
+        borderColor: Colors.accent,
+        borderWidth: 1,
+        borderRadius: BorderRadius.md,
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        alignSelf: 'center',
+        marginTop: 14,
+    },
+    devBoxText: { color: Colors.gray300, fontSize: 14 },
+    devCodeHighlight: { color: Colors.accent, fontWeight: '800', fontSize: 16, letterSpacing: 1 },
     codeRow: {
         flexDirection: 'row',
         justifyContent: 'center',

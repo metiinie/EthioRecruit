@@ -1,11 +1,20 @@
-import { IsString, IsNotEmpty, IsEmail, MinLength } from 'class-validator';
+import { IsString, IsOptional, MinLength } from 'class-validator';
 
 export class AdminLoginDto {
-    @IsEmail()
-    @IsNotEmpty()
-    email!: string;
+    @IsString()
+    @IsOptional()
+    email?: string;
+
+    @IsString()
+    @IsOptional()
+    phone?: string;
+
+    @IsString()
+    @IsOptional()
+    identifier?: string;
 
     @IsString()
     @MinLength(6)
     password!: string;
 }
+

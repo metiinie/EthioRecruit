@@ -15,29 +15,50 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius } from '../../constants';
 import { adminAuthService } from '../../services/authService';
 import { useAdminAuthStore } from '../../stores/adminAuthStore';
+import { getErrorMessage } from '../../services/api';
 
 export default function AdminLoginScreen() {
     const router = useRouter();
     const setAdminAuth = useAdminAuthStore((s) => s.setAdminAuth);
 
-    const [email, setEmail] = useState('');
+    const [identifier, setIdentifier] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
 
+    const sanitizePhone = (raw: string): string => {
+        let digits = raw.replace(/\D/g, '');
+        if (digits.startsWith('251')) {
+            digits = digits.slice(3);
+        }
+        digits = digits.replace(/^0+/, '');
+        return `+251${digits}`;
+    };
+
     const handleLogin = async () => {
-        if (!email || !password) {
+        if (!identifier.trim() || !password) {
             Alert.alert('Error', 'Please fill in all fields');
             return;
         }
 
         setLoading(true);
         try {
-            const response = await adminAuthService.login({ email, password });
+            const isEmail = identifier.includes('@');
+            const payload: any = { password };
+            if (isEmail) {
+                payload.email = identifier.trim().toLowerCase();
+                payload.identifier = identifier.trim().toLowerCase();
+            } else {
+                const formattedPhone = sanitizePhone(identifier);
+                payload.phone = formattedPhone;
+                payload.identifier = formattedPhone;
+            }
+
+            const response = await adminAuthService.login(payload);
             setAdminAuth(response.data.admin, response.data.token);
             router.replace('/(admin)');
         } catch (error: any) {
-            const msg = error.response?.data?.error?.message || 'Login failed';
+            const msg = getErrorMessage(error);
             Alert.alert('Error', msg);
         } finally {
             setLoading(false);
@@ -64,15 +85,15 @@ export default function AdminLoginScreen() {
 
                 <View style={styles.form}>
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Email</Text>
+                        <Text style={styles.label}>Email or Phone Number</Text>
                         <TextInput
                             style={styles.inputFull}
-                            placeholder="admin@agency.com"
+                            placeholder="admin@agency.com or 0921283801"
                             placeholderTextColor={Colors.gray500}
                             keyboardType="email-address"
                             autoCapitalize="none"
-                            value={email}
-                            onChangeText={setEmail}
+                            value={identifier}
+                            onChangeText={setIdentifier}
                         />
                     </View>
 

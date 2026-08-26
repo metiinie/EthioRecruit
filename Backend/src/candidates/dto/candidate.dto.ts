@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, IsInt, IsBoolean, IsArray, IsDate } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsInt, IsBoolean, IsArray, IsDate, IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateCandidateDto {
@@ -11,8 +11,16 @@ export class CreateCandidateDto {
     firstName!: string;
 
     @IsString()
+    @IsOptional()
+    middleName?: string;
+
+    @IsString()
     @IsNotEmpty()
     lastName!: string;
+
+    @IsString()
+    @IsOptional()
+    fullNameAmharic?: string;
 
     @IsOptional()
     @Type(() => Date)
@@ -35,6 +43,38 @@ export class CreateCandidateDto {
     @IsOptional()
     maritalStatus?: string;
 
+    @IsInt()
+    @IsOptional()
+    numberOfChildren?: number = 0;
+
+    @IsNumber()
+    @IsOptional()
+    heightCm?: number;
+
+    @IsNumber()
+    @IsOptional()
+    weightKg?: number;
+
+    @IsString()
+    @IsOptional()
+    complexion?: string;
+
+    @IsString()
+    @IsOptional()
+    phone?: string;
+
+    @IsString()
+    @IsOptional()
+    emergencyContactName?: string;
+
+    @IsString()
+    @IsOptional()
+    emergencyContactPhone?: string;
+
+    @IsString()
+    @IsOptional()
+    emergencyContactRelation?: string;
+
     @IsString()
     @IsOptional()
     summary?: string;
@@ -47,13 +87,104 @@ export class CreateCandidateDto {
     @IsOptional()
     yearsOfExperience?: number = 0;
 
+    @IsBoolean()
+    @IsOptional()
+    hasOverseasExperience?: boolean = false;
+
     @IsString()
     @IsOptional()
-    currentCountry?: string;
+    overseasDetails?: string;
+
+    @IsString()
+    @IsOptional()
+    localExperienceDetails?: string;
+
+    @IsString()
+    @IsOptional()
+    appliedPosition?: string;
+
+    @IsString()
+    @IsOptional()
+    currentCountry?: string = 'Ethiopia';
 
     @IsString()
     @IsOptional()
     currentCity?: string;
+
+    @IsString()
+    @IsOptional()
+    originRegion?: string;
+
+    @IsString()
+    @IsOptional()
+    passportNumber?: string;
+
+    @IsOptional()
+    @Type(() => Date)
+    @IsDate()
+    passportIssueDate?: Date;
+
+    @IsOptional()
+    @Type(() => Date)
+    @IsDate()
+    passportExpiryDate?: Date;
+
+    @IsString()
+    @IsOptional()
+    passportPlaceOfIssue?: string;
+
+    @IsString()
+    @IsOptional()
+    nationalIdNumber?: string;
+
+    @IsString()
+    @IsOptional()
+    cocStatus?: string = 'PENDING';
+
+    @IsOptional()
+    @Type(() => Date)
+    @IsDate()
+    cocIssueDate?: Date;
+
+    @IsString()
+    @IsOptional()
+    policeClearanceStatus?: string = 'PENDING';
+
+    @IsInt()
+    @IsOptional()
+    expectedSalary?: number;
+
+    @IsString()
+    @IsOptional()
+    expectedSalaryCurrency?: string = 'SAR';
+
+    @IsInt()
+    @IsOptional()
+    contractPeriodYears?: number = 2;
+
+    @IsString()
+    @IsOptional()
+    photoUrl?: string;
+
+    @IsString()
+    @IsOptional()
+    fullBodyPhotoUrl?: string;
+
+    @IsString()
+    @IsOptional()
+    videoUrl?: string;
+
+    @IsString()
+    @IsOptional()
+    passportCopyUrl?: string;
+
+    @IsString()
+    @IsOptional()
+    medicalCertUrl?: string;
+
+    @IsString()
+    @IsOptional()
+    cocCertUrl?: string;
 
     @IsArray()
     @IsString({ each: true })
@@ -103,6 +234,10 @@ export class CandidateFiltersDto {
 
     @IsOptional()
     @IsString()
+    cocStatus?: string;
+
+    @IsOptional()
+    @IsString()
     country?: string;
 
     @IsOptional()
@@ -119,4 +254,5 @@ export class CandidateFiltersDto {
     @Type(() => Number)
     perPage?: number = 10;
 }
+
 
