@@ -9,35 +9,110 @@ import {
     ActivityIndicator,
     Alert,
     Switch,
+    Modal,
 } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { vacancyService } from '../../../services/vacancyService';
+
+// Custom Reusable Dropdown Component
+function DropdownSelect({
+    label,
+    value,
+    options,
+    onSelect,
+    placeholder = 'Select Option',
+}: {
+    label: string;
+    value: string;
+    options: { label: string; value: string }[];
+    onSelect: (val: string) => void;
+    placeholder?: string;
+}) {
+    const [modalVisible, setModalVisible] = useState(false);
+    const selectedObj = options.find((o) => o.value === value);
+
+    return (
+        <View style={{ marginBottom: 12 }}>
+            <Text style={styles.label}>{label}</Text>
+            <TouchableOpacity
+                style={styles.dropdownBtn}
+                onPress={() => setModalVisible(true)}
+                activeOpacity={0.8}
+            >
+                <Text style={selectedObj ? styles.dropdownBtnText : styles.dropdownPlaceholder}>
+                    {selectedObj ? selectedObj.label : placeholder}
+                </Text>
+                <Ionicons name="chevron-down" size={18} color="#718096" />
+            </TouchableOpacity>
+
+            <Modal visible={modalVisible} transparent animationType="fade">
+                <TouchableOpacity
+                    style={styles.modalOverlay}
+                    activeOpacity={1}
+                    onPress={() => setModalVisible(false)}
+                >
+                    <View style={styles.modalCard}>
+                        <Text style={styles.modalTitle}>{label}</Text>
+                        <ScrollView style={{ maxHeight: 300 }}>
+                            {options.map((opt) => (
+                                <TouchableOpacity
+                                    key={opt.value}
+                                    style={[
+                                        styles.optionItem,
+                                        opt.value === value && styles.optionItemActive,
+                                    ]}
+                                    onPress={() => {
+                                        onSelect(opt.value);
+                                        setModalVisible(false);
+                                    }}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.optionText,
+                                            opt.value === value && styles.optionTextActive,
+                                        ]}
+                                    >
+                                        {opt.label}
+                                    </Text>
+                                    {opt.value === value && (
+                                        <Ionicons name="checkmark" size={18} color="#1A365D" />
+                                    )}
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                    </View>
+                </TouchableOpacity>
+            </Modal>
+        </View>
+    );
+}
 
 export default function NewVacancyScreen() {
     const router = useRouter();
     const [step, setStep] = useState(1);
     const [submitting, setSubmitting] = useState(false);
 
-    // Form State for Ethiopian Agency Job Listings
+    // Form State with CLEAN EMPTY DEFAULTS (No auto-filled values)
     const [formData, setFormData] = useState({
         // Step 1: Job Details & Partners
         title: '',
-        jobCode: 'VAC-2026-089',
-        categoryId: 'housemaid',
+        jobCode: '',
+        categoryId: '',
         employerType: 'individual_family',
-        employerName: 'Al-Farooq Family',
+        employerName: '',
         showEmployerName: false,
-        foreignAgencyPartner: 'Al-Riyadh Global Manpower Agency',
+        foreignAgencyPartner: '',
 
         // Step 2: Location & Compensation
-        country: 'Saudi Arabia',
-        city: 'Riyadh',
-        targetRegion: 'GCC / Middle East',
-        salaryMin: '1500',
-        salaryMax: '1800',
+        country: '',
+        city: '',
+        targetRegion: '',
+        salaryMin: '',
+        salaryMax: '',
         salaryCurrency: 'SAR',
-        overtimeTerms: 'Overtime paid at 1.5x standard hourly rate',
-        placementFeeTerms: 'Zero recruitment fee charged to candidates (MoLS compliant)',
+        overtimeTerms: '',
+        placementFeeTerms: '',
 
         // Step 3: Contract & Welfare Benefits
         contractPeriodYears: '2',
@@ -54,22 +129,22 @@ export default function NewVacancyScreen() {
         annualLeaveDays: '30',
 
         // Step 4: Candidate Criteria & Requirements
-        genderPreference: 'female',
-        religionPreference: 'Muslim',
-        ageMin: '21',
-        ageMax: '40',
-        experienceRequired: '1',
+        genderPreference: 'any',
+        religionPreference: 'any',
+        ageMin: '',
+        ageMax: '',
+        experienceRequired: '',
         overseasExpRequired: false,
-        educationLevelRequired: 'Primary School / 8th Grade Minimum',
-        requirementsInput: 'Valid Ethiopian Passport (2+ yrs validity), GAMCA Fit Medical, MoLS COC Level 1',
-        requiredSkillsInput: 'Cleaning, Cooking Arabic Dishes, Baby Care, Laundry',
-        requiredLanguagesInput: 'Basic Arabic, Amharic',
-        requiredCertificatesInput: 'Valid Passport, Fit Medical, Level 1 COC Certificate',
+        educationLevelRequired: '',
+        requirementsInput: '',
+        requiredSkillsInput: '',
+        requiredLanguagesInput: '',
+        requiredCertificatesInput: '',
 
         // Step 5: Capacity, Description & Publishing
-        vacanciesCount: '5',
-        applicationDeadline: '2026-10-31',
-        description: 'Urgent demand for experienced housemaids and cooks in Riyadh, Saudi Arabia. Full sponsorship, free accommodation, free meals, medical insurance, and round-trip flight tickets provided.',
+        vacanciesCount: '',
+        applicationDeadline: '',
+        description: '',
         status: 'ACTIVE',
     });
 
@@ -108,54 +183,54 @@ export default function NewVacancyScreen() {
             const payload: any = {
                 title: formData.title.trim(),
                 jobCode: formData.jobCode.trim() || undefined,
-                categoryId: formData.categoryId,
+                categoryId: formData.categoryId || 'housemaid',
                 employerType: formData.employerType,
                 employerName: formData.employerName || undefined,
                 showEmployerName: formData.showEmployerName,
                 foreignAgencyPartner: formData.foreignAgencyPartner || undefined,
 
-                country: formData.country,
+                country: formData.country || 'Saudi Arabia',
                 city: formData.city || undefined,
                 targetRegion: formData.targetRegion || undefined,
-                salaryMin: parseInt(formData.salaryMin, 10) || 1500,
-                salaryMax: parseInt(formData.salaryMax, 10) || 1800,
+                salaryMin: formData.salaryMin ? parseInt(formData.salaryMin, 10) : 1500,
+                salaryMax: formData.salaryMax ? parseInt(formData.salaryMax, 10) : undefined,
                 salaryCurrency: formData.salaryCurrency,
                 overtimeTerms: formData.overtimeTerms || undefined,
                 placementFeeTerms: formData.placementFeeTerms || undefined,
 
-                contractPeriodYears: parseInt(formData.contractPeriodYears, 10) || 2,
-                probationPeriodMonths: parseInt(formData.probationPeriodMonths, 10) || 3,
-                workingHoursPerDay: parseInt(formData.workingHoursPerDay, 10) || 8,
-                workingDaysPerWeek: parseInt(formData.workingDaysPerWeek, 10) || 6,
-                offDaysPerMonth: parseInt(formData.offDaysPerMonth, 10) || 4,
+                contractPeriodYears: formData.contractPeriodYears ? parseInt(formData.contractPeriodYears, 10) : 2,
+                probationPeriodMonths: formData.probationPeriodMonths ? parseInt(formData.probationPeriodMonths, 10) : 3,
+                workingHoursPerDay: formData.workingHoursPerDay ? parseInt(formData.workingHoursPerDay, 10) : 8,
+                workingDaysPerWeek: formData.workingDaysPerWeek ? parseInt(formData.workingDaysPerWeek, 10) : 6,
+                offDaysPerMonth: formData.offDaysPerMonth ? parseInt(formData.offDaysPerMonth, 10) : 4,
                 visaSponsorship: formData.visaSponsorship,
                 accommodationProvided: formData.accommodationProvided,
                 mealsProvided: formData.mealsProvided,
                 transportationProvided: formData.transportationProvided,
                 healthInsurance: formData.healthInsurance,
                 flightTicketProvided: formData.flightTicketProvided,
-                annualLeaveDays: parseInt(formData.annualLeaveDays, 10) || 30,
+                annualLeaveDays: formData.annualLeaveDays ? parseInt(formData.annualLeaveDays, 10) : 30,
 
                 genderPreference: formData.genderPreference,
                 religionPreference: formData.religionPreference,
-                ageMin: parseInt(formData.ageMin, 10) || 21,
-                ageMax: parseInt(formData.ageMax, 10) || 40,
-                experienceRequired: parseInt(formData.experienceRequired, 10) || 0,
+                ageMin: formData.ageMin ? parseInt(formData.ageMin, 10) : undefined,
+                ageMax: formData.ageMax ? parseInt(formData.ageMax, 10) : undefined,
+                experienceRequired: formData.experienceRequired ? parseInt(formData.experienceRequired, 10) : 0,
                 overseasExpRequired: formData.overseasExpRequired,
                 educationLevelRequired: formData.educationLevelRequired || undefined,
-                requirements: formData.requirementsInput.split(',').map((r) => r.trim()).filter(Boolean),
-                requiredSkills: formData.requiredSkillsInput.split(',').map((s) => s.trim()).filter(Boolean),
-                requiredLanguages: formData.requiredLanguagesInput.split(',').map((l) => l.trim()).filter(Boolean),
-                requiredCertificates: formData.requiredCertificatesInput.split(',').map((c) => c.trim()).filter(Boolean),
+                requirements: formData.requirementsInput ? formData.requirementsInput.split(',').map((r) => r.trim()).filter(Boolean) : [],
+                requiredSkills: formData.requiredSkillsInput ? formData.requiredSkillsInput.split(',').map((s) => s.trim()).filter(Boolean) : [],
+                requiredLanguages: formData.requiredLanguagesInput ? formData.requiredLanguagesInput.split(',').map((l) => l.trim()).filter(Boolean) : [],
+                requiredCertificates: formData.requiredCertificatesInput ? formData.requiredCertificatesInput.split(',').map((c) => c.trim()).filter(Boolean) : [],
 
-                vacanciesCount: parseInt(formData.vacanciesCount, 10) || 1,
+                vacanciesCount: formData.vacanciesCount ? parseInt(formData.vacanciesCount, 10) : 1,
                 applicationDeadline: formData.applicationDeadline ? new Date(formData.applicationDeadline) : undefined,
                 description: formData.description,
                 status: formData.status,
             };
 
             await vacancyService.createVacancy(payload);
-            Alert.alert('Success', 'Job Vacancy posted with complete Ethiopian Agency terms!', [
+            Alert.alert('Success', 'Job Vacancy posted successfully!', [
                 { text: 'OK', onPress: () => router.back() },
             ]);
         } catch (error: any) {
@@ -195,7 +270,7 @@ export default function NewVacancyScreen() {
                     <Text style={styles.label}>Vacancy Title *</Text>
                     <TextInput
                         style={styles.input}
-                        placeholder="e.g. Experienced Housemaid & Cook - Riyadh"
+                        placeholder="Vacancy Title"
                         value={formData.title}
                         onChangeText={(val) => updateForm('title', val)}
                     />
@@ -205,33 +280,47 @@ export default function NewVacancyScreen() {
                             <Text style={styles.label}>Job Code / Ref No.</Text>
                             <TextInput
                                 style={styles.input}
-                                placeholder="VAC-2026-089"
+                                placeholder="VAC-..."
                                 value={formData.jobCode}
                                 onChangeText={(val) => updateForm('jobCode', val)}
                             />
                         </View>
                         <View style={{ flex: 1, marginLeft: 6 }}>
-                            <Text style={styles.label}>Category ID *</Text>
-                            <TextInput
-                                style={styles.input}
+                            <DropdownSelect
+                                label="Job Category"
                                 value={formData.categoryId}
-                                onChangeText={(val) => updateForm('categoryId', val)}
+                                placeholder="Select Category"
+                                options={[
+                                    { label: 'Housemaid (የቤት ሰራተኛ)', value: 'housemaid' },
+                                    { label: 'Nanny / Childcare', value: 'nanny' },
+                                    { label: 'Cook / Chef', value: 'cook' },
+                                    { label: 'Elderly Caregiver', value: 'caregiver' },
+                                    { label: 'Driver', value: 'driver' },
+                                    { label: 'Cleaner', value: 'cleaner' },
+                                    { label: 'Hospitality Staff', value: 'hospitality' },
+                                    { label: 'General Worker', value: 'general_worker' },
+                                ]}
+                                onSelect={(val) => updateForm('categoryId', val)}
                             />
                         </View>
                     </View>
 
-                    <Text style={styles.label}>Employer Type</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="individual_family / corporate"
+                    <DropdownSelect
+                        label="Employer Type"
                         value={formData.employerType}
-                        onChangeText={(val) => updateForm('employerType', val)}
+                        placeholder="Select Employer Type"
+                        options={[
+                            { label: 'Individual Family', value: 'individual_family' },
+                            { label: 'Corporate Company', value: 'corporate' },
+                            { label: 'Foreign Recruitment Agency', value: 'foreign_agency' },
+                        ]}
+                        onSelect={(val) => updateForm('employerType', val)}
                     />
 
                     <Text style={styles.label}>Employer Client Name</Text>
                     <TextInput
                         style={styles.input}
-                        placeholder="e.g. Al-Farooq Family"
+                        placeholder="Employer Name"
                         value={formData.employerName}
                         onChangeText={(val) => updateForm('employerName', val)}
                     />
@@ -251,7 +340,7 @@ export default function NewVacancyScreen() {
                     <Text style={styles.label}>Foreign Partner Recruitment Agency</Text>
                     <TextInput
                         style={styles.input}
-                        placeholder="e.g. Al-Riyadh Global Manpower Agency (Saudi Arabia)"
+                        placeholder="Partner Agency Name"
                         value={formData.foreignAgencyPartner}
                         onChangeText={(val) => updateForm('foreignAgencyPartner', val)}
                     />
@@ -264,30 +353,43 @@ export default function NewVacancyScreen() {
                     <Text style={styles.sectionHeader}>Destination & Location</Text>
                     <View style={styles.row}>
                         <View style={{ flex: 1, marginRight: 6 }}>
-                            <Text style={styles.label}>Destination Country *</Text>
-                            <TextInput
-                                style={styles.input}
+                            <DropdownSelect
+                                label="Destination Country"
                                 value={formData.country}
-                                onChangeText={(val) => updateForm('country', val)}
+                                placeholder="Select Country"
+                                options={[
+                                    { label: 'Saudi Arabia', value: 'Saudi Arabia' },
+                                    { label: 'United Arab Emirates', value: 'United Arab Emirates' },
+                                    { label: 'Qatar', value: 'Qatar' },
+                                    { label: 'Kuwait', value: 'Kuwait' },
+                                    { label: 'Oman', value: 'Oman' },
+                                    { label: 'Jordan', value: 'Jordan' },
+                                    { label: 'Ethiopia', value: 'Ethiopia' },
+                                ]}
+                                onSelect={(val) => updateForm('country', val)}
                             />
                         </View>
                         <View style={{ flex: 1, marginLeft: 6 }}>
                             <Text style={styles.label}>City</Text>
                             <TextInput
                                 style={styles.input}
-                                placeholder="Riyadh / Dubai / Jeddah"
+                                placeholder="e.g. Riyadh"
                                 value={formData.city}
                                 onChangeText={(val) => updateForm('city', val)}
                             />
                         </View>
                     </View>
 
-                    <Text style={styles.label}>Target Region</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="GCC / Middle East / Horn of Africa"
+                    <DropdownSelect
+                        label="Target Region"
                         value={formData.targetRegion}
-                        onChangeText={(val) => updateForm('targetRegion', val)}
+                        placeholder="Select Target Region"
+                        options={[
+                            { label: 'GCC / Middle East', value: 'GCC / Middle East' },
+                            { label: 'Horn of Africa', value: 'Horn of Africa' },
+                            { label: 'Local Ethiopia', value: 'Local Ethiopia' },
+                        ]}
+                        onSelect={(val) => updateForm('targetRegion', val)}
                     />
 
                     <Text style={styles.sectionHeader}>Salary & Remuneration</Text>
@@ -297,6 +399,7 @@ export default function NewVacancyScreen() {
                             <TextInput
                                 style={styles.input}
                                 keyboardType="numeric"
+                                placeholder="1500"
                                 value={formData.salaryMin}
                                 onChangeText={(val) => updateForm('salaryMin', val)}
                             />
@@ -306,16 +409,24 @@ export default function NewVacancyScreen() {
                             <TextInput
                                 style={styles.input}
                                 keyboardType="numeric"
+                                placeholder="1800"
                                 value={formData.salaryMax}
                                 onChangeText={(val) => updateForm('salaryMax', val)}
                             />
                         </View>
                         <View style={{ flex: 1, marginLeft: 6 }}>
-                            <Text style={styles.label}>Currency</Text>
-                            <TextInput
-                                style={styles.input}
+                            <DropdownSelect
+                                label="Currency"
                                 value={formData.salaryCurrency}
-                                onChangeText={(val) => updateForm('salaryCurrency', val)}
+                                placeholder="Currency"
+                                options={[
+                                    { label: 'SAR (Saudi)', value: 'SAR' },
+                                    { label: 'AED (UAE)', value: 'AED' },
+                                    { label: 'QAR (Qatar)', value: 'QAR' },
+                                    { label: 'USD ($)', value: 'USD' },
+                                    { label: 'ETB (Birr)', value: 'ETB' },
+                                ]}
+                                onSelect={(val) => updateForm('salaryCurrency', val)}
                             />
                         </View>
                     </View>
@@ -323,7 +434,7 @@ export default function NewVacancyScreen() {
                     <Text style={styles.label}>Overtime Terms & Conditions</Text>
                     <TextInput
                         style={styles.input}
-                        placeholder="Overtime paid at 1.5x standard rate"
+                        placeholder="Overtime terms"
                         value={formData.overtimeTerms}
                         onChangeText={(val) => updateForm('overtimeTerms', val)}
                     />
@@ -331,7 +442,7 @@ export default function NewVacancyScreen() {
                     <Text style={styles.label}>Placement & Recruitment Fee Policy</Text>
                     <TextInput
                         style={styles.input}
-                        placeholder="Zero candidate fee under MoLS regulations"
+                        placeholder="Placement fee terms"
                         value={formData.placementFeeTerms}
                         onChangeText={(val) => updateForm('placementFeeTerms', val)}
                     />
@@ -348,6 +459,7 @@ export default function NewVacancyScreen() {
                             <TextInput
                                 style={styles.input}
                                 keyboardType="numeric"
+                                placeholder="2"
                                 value={formData.contractPeriodYears}
                                 onChangeText={(val) => updateForm('contractPeriodYears', val)}
                             />
@@ -357,6 +469,7 @@ export default function NewVacancyScreen() {
                             <TextInput
                                 style={styles.input}
                                 keyboardType="numeric"
+                                placeholder="3"
                                 value={formData.probationPeriodMonths}
                                 onChangeText={(val) => updateForm('probationPeriodMonths', val)}
                             />
@@ -366,6 +479,7 @@ export default function NewVacancyScreen() {
                             <TextInput
                                 style={styles.input}
                                 keyboardType="numeric"
+                                placeholder="30"
                                 value={formData.annualLeaveDays}
                                 onChangeText={(val) => updateForm('annualLeaveDays', val)}
                             />
@@ -378,6 +492,7 @@ export default function NewVacancyScreen() {
                             <TextInput
                                 style={styles.input}
                                 keyboardType="numeric"
+                                placeholder="8"
                                 value={formData.workingHoursPerDay}
                                 onChangeText={(val) => updateForm('workingHoursPerDay', val)}
                             />
@@ -387,6 +502,7 @@ export default function NewVacancyScreen() {
                             <TextInput
                                 style={styles.input}
                                 keyboardType="numeric"
+                                placeholder="6"
                                 value={formData.workingDaysPerWeek}
                                 onChangeText={(val) => updateForm('workingDaysPerWeek', val)}
                             />
@@ -396,6 +512,7 @@ export default function NewVacancyScreen() {
                             <TextInput
                                 style={styles.input}
                                 keyboardType="numeric"
+                                placeholder="4"
                                 value={formData.offDaysPerMonth}
                                 onChangeText={(val) => updateForm('offDaysPerMonth', val)}
                             />
@@ -429,21 +546,31 @@ export default function NewVacancyScreen() {
                     <Text style={styles.sectionHeader}>Demographics Preference</Text>
                     <View style={styles.row}>
                         <View style={{ flex: 1, marginRight: 6 }}>
-                            <Text style={styles.label}>Gender Preference</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="female / male / any"
+                            <DropdownSelect
+                                label="Gender Preference"
                                 value={formData.genderPreference}
-                                onChangeText={(val) => updateForm('genderPreference', val)}
+                                placeholder="Select Gender"
+                                options={[
+                                    { label: 'Any', value: 'any' },
+                                    { label: 'Female', value: 'female' },
+                                    { label: 'Male', value: 'male' },
+                                ]}
+                                onSelect={(val) => updateForm('genderPreference', val)}
                             />
                         </View>
                         <View style={{ flex: 1, marginLeft: 6 }}>
-                            <Text style={styles.label}>Religion Preference</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Muslim / Christian / any"
+                            <DropdownSelect
+                                label="Religion Preference"
                                 value={formData.religionPreference}
-                                onChangeText={(val) => updateForm('religionPreference', val)}
+                                placeholder="Select Religion"
+                                options={[
+                                    { label: 'Any', value: 'any' },
+                                    { label: 'Muslim', value: 'Muslim' },
+                                    { label: 'Orthodox', value: 'Orthodox' },
+                                    { label: 'Protestant', value: 'Protestant' },
+                                    { label: 'Catholic', value: 'Catholic' },
+                                ]}
+                                onSelect={(val) => updateForm('religionPreference', val)}
                             />
                         </View>
                     </View>
@@ -454,6 +581,7 @@ export default function NewVacancyScreen() {
                             <TextInput
                                 style={styles.input}
                                 keyboardType="numeric"
+                                placeholder="21"
                                 value={formData.ageMin}
                                 onChangeText={(val) => updateForm('ageMin', val)}
                             />
@@ -463,6 +591,7 @@ export default function NewVacancyScreen() {
                             <TextInput
                                 style={styles.input}
                                 keyboardType="numeric"
+                                placeholder="40"
                                 value={formData.ageMax}
                                 onChangeText={(val) => updateForm('ageMax', val)}
                             />
@@ -472,6 +601,7 @@ export default function NewVacancyScreen() {
                             <TextInput
                                 style={styles.input}
                                 keyboardType="numeric"
+                                placeholder="0"
                                 value={formData.experienceRequired}
                                 onChangeText={(val) => updateForm('experienceRequired', val)}
                             />
@@ -493,7 +623,7 @@ export default function NewVacancyScreen() {
                     <Text style={styles.label}>Minimum Education Level Required</Text>
                     <TextInput
                         style={styles.input}
-                        placeholder="Primary School / 8th Grade Minimum"
+                        placeholder="e.g. Primary School / 8th Grade Minimum"
                         value={formData.educationLevelRequired}
                         onChangeText={(val) => updateForm('educationLevelRequired', val)}
                     />
@@ -502,6 +632,7 @@ export default function NewVacancyScreen() {
                     <Text style={styles.label}>Key Requirements (Comma Separated)</Text>
                     <TextInput
                         style={styles.input}
+                        placeholder="Valid Passport, GAMCA Medical, COC Level 1"
                         value={formData.requirementsInput}
                         onChangeText={(val) => updateForm('requirementsInput', val)}
                     />
@@ -509,6 +640,7 @@ export default function NewVacancyScreen() {
                     <Text style={styles.label}>Required Skills (Comma Separated)</Text>
                     <TextInput
                         style={styles.input}
+                        placeholder="Cleaning, Cooking Arabic Dishes, Baby Care"
                         value={formData.requiredSkillsInput}
                         onChangeText={(val) => updateForm('requiredSkillsInput', val)}
                     />
@@ -516,6 +648,7 @@ export default function NewVacancyScreen() {
                     <Text style={styles.label}>Required Languages (Comma Separated)</Text>
                     <TextInput
                         style={styles.input}
+                        placeholder="Basic Arabic, Amharic"
                         value={formData.requiredLanguagesInput}
                         onChangeText={(val) => updateForm('requiredLanguagesInput', val)}
                     />
@@ -523,6 +656,7 @@ export default function NewVacancyScreen() {
                     <Text style={styles.label}>Required Documents/Certificates (Comma Separated)</Text>
                     <TextInput
                         style={styles.input}
+                        placeholder="Valid Passport, Fit Medical, Level 1 COC"
                         value={formData.requiredCertificatesInput}
                         onChangeText={(val) => updateForm('requiredCertificatesInput', val)}
                     />
@@ -535,10 +669,11 @@ export default function NewVacancyScreen() {
                     <Text style={styles.sectionHeader}>Vacancy Capacity & Deadline</Text>
                     <View style={styles.row}>
                         <View style={{ flex: 1, marginRight: 6 }}>
-                            <Text style={styles.label}>Number of Vacancies (Open Positions)</Text>
+                            <Text style={styles.label}>Number of Vacancies (Positions)</Text>
                             <TextInput
                                 style={styles.input}
                                 keyboardType="numeric"
+                                placeholder="1"
                                 value={formData.vacanciesCount}
                                 onChangeText={(val) => updateForm('vacanciesCount', val)}
                             />
@@ -547,7 +682,7 @@ export default function NewVacancyScreen() {
                             <Text style={styles.label}>Deadline (YYYY-MM-DD)</Text>
                             <TextInput
                                 style={styles.input}
-                                placeholder="2026-10-31"
+                                placeholder="YYYY-MM-DD"
                                 value={formData.applicationDeadline}
                                 onChangeText={(val) => updateForm('applicationDeadline', val)}
                             />
@@ -563,12 +698,17 @@ export default function NewVacancyScreen() {
                         onChangeText={(val) => updateForm('description', val)}
                     />
 
-                    <Text style={styles.label}>Posting Status</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="ACTIVE / DRAFT"
+                    <DropdownSelect
+                        label="Posting Status"
                         value={formData.status}
-                        onChangeText={(val) => updateForm('status', val)}
+                        placeholder="Select Status"
+                        options={[
+                            { label: 'Active (Published)', value: 'ACTIVE' },
+                            { label: 'Draft', value: 'DRAFT' },
+                            { label: 'Paused', value: 'PAUSED' },
+                            { label: 'Closed', value: 'CLOSED' },
+                        ]}
+                        onSelect={(val) => updateForm('status', val)}
                     />
                 </View>
             )}
@@ -613,6 +753,16 @@ const styles = StyleSheet.create({
     label: { fontSize: 12, fontWeight: '600', color: '#4A5568', marginTop: 10, marginBottom: 4 },
     input: { backgroundColor: '#EDF2F7', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 9, color: '#2D3748', fontSize: 13 },
     row: { flexDirection: 'row' },
+    dropdownBtn: { backgroundColor: '#EDF2F7', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    dropdownBtnText: { color: '#2D3748', fontSize: 13, fontWeight: '500' },
+    dropdownPlaceholder: { color: '#A0AEC0', fontSize: 13 },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', paddingHorizontal: 24 },
+    modalCard: { backgroundColor: '#FFFFFF', borderRadius: 14, padding: 18, elevation: 5 },
+    modalTitle: { fontSize: 16, fontWeight: 'bold', color: '#1A365D', marginBottom: 12, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', paddingBottom: 8 },
+    optionItem: { paddingVertical: 12, paddingHorizontal: 8, borderBottomWidth: 1, borderBottomColor: '#EDF2F7', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    optionItemActive: { backgroundColor: '#EBF8FF' },
+    optionText: { fontSize: 14, color: '#4A5568' },
+    optionTextActive: { fontWeight: 'bold', color: '#1A365D' },
     switchRow: { flexDirection: 'row', alignItems: 'center', marginTop: 14, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#E2E8F0' },
     switchRowSmall: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 },
     switchTitle: { fontSize: 14, fontWeight: 'bold', color: '#2D3748' },

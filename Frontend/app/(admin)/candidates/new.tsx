@@ -9,67 +9,142 @@ import {
     ActivityIndicator,
     Alert,
     Switch,
+    Modal,
+    Image,
 } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { candidateService } from '../../../services/candidateService';
-import { Colors } from '../../../constants';
+
+// Custom Reusable Dropdown Component
+function DropdownSelect({
+    label,
+    value,
+    options,
+    onSelect,
+    placeholder = 'Select Option',
+}: {
+    label: string;
+    value: string;
+    options: { label: string; value: string }[];
+    onSelect: (val: string) => void;
+    placeholder?: string;
+}) {
+    const [modalVisible, setModalVisible] = useState(false);
+    const selectedObj = options.find((o) => o.value === value);
+
+    return (
+        <View style={{ marginBottom: 12 }}>
+            <Text style={styles.label}>{label}</Text>
+            <TouchableOpacity
+                style={styles.dropdownBtn}
+                onPress={() => setModalVisible(true)}
+                activeOpacity={0.8}
+            >
+                <Text style={selectedObj ? styles.dropdownBtnText : styles.dropdownPlaceholder}>
+                    {selectedObj ? selectedObj.label : placeholder}
+                </Text>
+                <Ionicons name="chevron-down" size={18} color="#718096" />
+            </TouchableOpacity>
+
+            <Modal visible={modalVisible} transparent animationType="fade">
+                <TouchableOpacity
+                    style={styles.modalOverlay}
+                    activeOpacity={1}
+                    onPress={() => setModalVisible(false)}
+                >
+                    <View style={styles.modalCard}>
+                        <Text style={styles.modalTitle}>{label}</Text>
+                        <ScrollView style={{ maxHeight: 300 }}>
+                            {options.map((opt) => (
+                                <TouchableOpacity
+                                    key={opt.value}
+                                    style={[
+                                        styles.optionItem,
+                                        opt.value === value && styles.optionItemActive,
+                                    ]}
+                                    onPress={() => {
+                                        onSelect(opt.value);
+                                        setModalVisible(false);
+                                    }}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.optionText,
+                                            opt.value === value && styles.optionTextActive,
+                                        ]}
+                                    >
+                                        {opt.label}
+                                    </Text>
+                                    {opt.value === value && (
+                                        <Ionicons name="checkmark" size={18} color="#1A365D" />
+                                    )}
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                    </View>
+                </TouchableOpacity>
+            </Modal>
+        </View>
+    );
+}
 
 export default function NewCandidateWizardScreen() {
     const router = useRouter();
     const [step, setStep] = useState(1);
     const [submitting, setSubmitting] = useState(false);
 
-    // Comprehensive Form State according to Ethiopian Agency Standards
+    // Form State with EMPTY DEFAULTS (No auto-filled values)
     const [formData, setFormData] = useState({
         // Step 1: Personal & Biometrics
         firstName: '',
         middleName: '',
         lastName: '',
         fullNameAmharic: '',
-        age: '25',
-        gender: 'female',
-        religion: 'Muslim',
-        maritalStatus: 'Single',
-        numberOfChildren: '0',
-        heightCm: '160',
-        weightKg: '55',
-        complexion: 'Medium',
+        age: '',
+        gender: '',
+        religion: '',
+        maritalStatus: '',
+        numberOfChildren: '',
+        heightCm: '',
+        weightKg: '',
+        complexion: '',
 
         // Step 2: Contact & Location
         phone: '',
         emergencyContactName: '',
         emergencyContactPhone: '',
-        emergencyContactRelation: 'Mother',
+        emergencyContactRelation: '',
         currentCountry: 'Ethiopia',
-        city: 'Addis Ababa',
-        originRegion: 'Oromia',
+        city: '',
+        originRegion: '',
 
         // Step 3: Legal & Documents
         passportNumber: '',
-        passportPlaceOfIssue: 'Addis Ababa',
+        passportPlaceOfIssue: '',
         passportIssueDate: '',
         passportExpiryDate: '',
         nationalIdNumber: '',
-        cocStatus: 'LEVEL_1',
+        cocStatus: '',
         cocIssueDate: '',
-        medicalStatus: 'PASSED_GAMCA',
-        policeClearanceStatus: 'CLEAN',
-        visaStatus: 'NO_VISA',
+        medicalStatus: '',
+        policeClearanceStatus: '',
+        visaStatus: '',
 
         // Step 4: Qualifications & Experience
-        categoryId: 'housemaid',
-        appliedPosition: 'Housemaid & Cook',
-        yearsOfExperience: '3',
-        hasOverseasExperience: true,
-        overseasDetails: '2 Years in Riyadh, Saudi Arabia (Housekeeping & Cooking)',
-        localExperienceDetails: '1 Year in Addis Ababa',
-        educationLevel: 'High School (10th Grade)',
-        skillsInput: 'Cleaning, Cooking Arabic Food, Baby Care, Laundry, Ironing',
-        languagesInput: 'Amharic, Basic Arabic, English',
+        categoryId: '',
+        appliedPosition: '',
+        yearsOfExperience: '',
+        hasOverseasExperience: false,
+        overseasDetails: '',
+        localExperienceDetails: '',
+        educationLevel: '',
+        skillsInput: '',
+        languagesInput: '',
 
         // Step 5: Financials, Media & Publishing
-        expectedSalary: '1200',
+        expectedSalary: '',
         expectedSalaryCurrency: 'SAR',
         contractPeriodYears: '2',
         photoUrl: '',
@@ -78,7 +153,7 @@ export default function NewCandidateWizardScreen() {
         passportCopyUrl: '',
         medicalCertUrl: '',
         cocCertUrl: '',
-        summary: 'Hardworking, reliable housemaid experienced in housekeeping, childcare, and preparing Middle Eastern dishes.',
+        summary: '',
         isPublished: true,
     });
 
@@ -86,10 +161,43 @@ export default function NewCandidateWizardScreen() {
         setFormData((prev) => ({ ...prev, [key]: value }));
     };
 
+    // Media Picker Function (Gallery or Camera)
+    const pickMedia = async (fieldKey: string, mediaType: 'image' | 'video', source: 'gallery' | 'camera') => {
+        try {
+            const permissionResult =
+                source === 'camera'
+                    ? await ImagePicker.requestCameraPermissionsAsync()
+                    : await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+            if (!permissionResult.granted) {
+                Alert.alert('Permission Denied', `Camera/Gallery access is required to attach ${mediaType}s.`);
+                return;
+            }
+
+            const result =
+                source === 'camera'
+                    ? await ImagePicker.launchCameraAsync({
+                        mediaTypes: mediaType === 'video' ? ImagePicker.MediaTypeOptions.Videos : ImagePicker.MediaTypeOptions.Images,
+                        quality: 0.8,
+                    })
+                    : await ImagePicker.launchImageLibraryAsync({
+                        mediaTypes: mediaType === 'video' ? ImagePicker.MediaTypeOptions.Videos : ImagePicker.MediaTypeOptions.Images,
+                        quality: 0.8,
+                    });
+
+            if (!result.canceled && result.assets && result.assets.length > 0) {
+                const pickedUri = result.assets[0].uri;
+                updateForm(fieldKey, pickedUri);
+            }
+        } catch (err: any) {
+            Alert.alert('Media Error', err.message || 'Failed to select media');
+        }
+    };
+
     const handleNext = () => {
         if (step === 1) {
             if (!formData.firstName.trim() || !formData.lastName.trim()) {
-                Alert.alert('Required Fields', 'First name and Last name (Grandfather name) are required.');
+                Alert.alert('Required Fields', 'First name and Last name are required.');
                 return;
             }
             setStep(2);
@@ -109,18 +217,24 @@ export default function NewCandidateWizardScreen() {
     const handleSubmit = async () => {
         setSubmitting(true);
         try {
+            const parseDate = (val: string) => {
+                if (!val || !val.trim()) return undefined;
+                const d = new Date(val);
+                return isNaN(d.getTime()) ? undefined : d.toISOString();
+            };
+
             const payload: any = {
                 firstName: formData.firstName.trim(),
                 middleName: formData.middleName.trim() || undefined,
                 lastName: formData.lastName.trim(),
                 fullNameAmharic: formData.fullNameAmharic.trim() || undefined,
-                age: parseInt(formData.age, 10) || 25,
-                gender: formData.gender,
-                religion: formData.religion,
-                maritalStatus: formData.maritalStatus,
-                numberOfChildren: parseInt(formData.numberOfChildren, 10) || 0,
-                heightCm: parseFloat(formData.heightCm) || undefined,
-                weightKg: parseFloat(formData.weightKg) || undefined,
+                age: formData.age ? parseInt(formData.age, 10) : undefined,
+                gender: formData.gender || undefined,
+                religion: formData.religion || undefined,
+                maritalStatus: formData.maritalStatus || undefined,
+                numberOfChildren: formData.numberOfChildren ? parseInt(formData.numberOfChildren, 10) : 0,
+                heightCm: formData.heightCm ? parseFloat(formData.heightCm) : undefined,
+                weightKg: formData.weightKg ? parseFloat(formData.weightKg) : undefined,
                 complexion: formData.complexion || undefined,
 
                 phone: formData.phone || undefined,
@@ -128,33 +242,33 @@ export default function NewCandidateWizardScreen() {
                 emergencyContactPhone: formData.emergencyContactPhone || undefined,
                 emergencyContactRelation: formData.emergencyContactRelation || undefined,
                 currentCountry: formData.currentCountry,
-                currentCity: formData.city,
+                currentCity: formData.city || undefined,
                 originRegion: formData.originRegion || undefined,
 
                 passportNumber: formData.passportNumber || undefined,
                 passportPlaceOfIssue: formData.passportPlaceOfIssue || undefined,
-                passportIssueDate: formData.passportIssueDate ? new Date(formData.passportIssueDate) : undefined,
-                passportExpiryDate: formData.passportExpiryDate ? new Date(formData.passportExpiryDate) : undefined,
+                passportIssueDate: parseDate(formData.passportIssueDate),
+                passportExpiryDate: parseDate(formData.passportExpiryDate),
                 nationalIdNumber: formData.nationalIdNumber || undefined,
-                cocStatus: formData.cocStatus,
-                cocIssueDate: formData.cocIssueDate ? new Date(formData.cocIssueDate) : undefined,
-                medicalStatus: formData.medicalStatus,
-                policeClearanceStatus: formData.policeClearanceStatus,
-                visaStatus: formData.visaStatus,
+                cocStatus: formData.cocStatus || undefined,
+                cocIssueDate: parseDate(formData.cocIssueDate),
+                medicalStatus: formData.medicalStatus || undefined,
+                policeClearanceStatus: formData.policeClearanceStatus || undefined,
+                visaStatus: formData.visaStatus || undefined,
 
-                categoryId: formData.categoryId,
+                categoryId: formData.categoryId || 'Housemaid',
                 appliedPosition: formData.appliedPosition || undefined,
-                yearsOfExperience: parseInt(formData.yearsOfExperience, 10) || 0,
+                yearsOfExperience: formData.yearsOfExperience ? parseInt(formData.yearsOfExperience, 10) : 0,
                 hasOverseasExperience: formData.hasOverseasExperience,
                 overseasDetails: formData.overseasDetails || undefined,
                 localExperienceDetails: formData.localExperienceDetails || undefined,
                 educationLevel: formData.educationLevel || undefined,
-                skills: formData.skillsInput.split(',').map((s) => s.trim()).filter(Boolean),
-                languages: formData.languagesInput.split(',').map((l) => l.trim()).filter(Boolean),
+                skills: formData.skillsInput ? formData.skillsInput.split(',').map((s) => s.trim()).filter(Boolean) : [],
+                languages: formData.languagesInput ? formData.languagesInput.split(',').map((l) => l.trim()).filter(Boolean) : [],
 
-                expectedSalary: parseInt(formData.expectedSalary, 10) || 1200,
-                expectedSalaryCurrency: formData.expectedSalaryCurrency,
-                contractPeriodYears: parseInt(formData.contractPeriodYears, 10) || 2,
+                expectedSalary: formData.expectedSalary ? parseInt(formData.expectedSalary, 10) : undefined,
+                expectedSalaryCurrency: formData.expectedSalaryCurrency || 'SAR',
+                contractPeriodYears: formData.contractPeriodYears ? parseInt(formData.contractPeriodYears, 10) : 2,
                 summary: formData.summary || undefined,
                 photoUrl: formData.photoUrl || undefined,
                 fullBodyPhotoUrl: formData.fullBodyPhotoUrl || undefined,
@@ -166,11 +280,13 @@ export default function NewCandidateWizardScreen() {
             };
 
             await candidateService.createCandidate(payload);
-            Alert.alert('Success', 'Candidate record created with full Ethiopian Agency detail!', [
+            Alert.alert('Success', 'Candidate created successfully!', [
                 { text: 'OK', onPress: () => router.back() },
             ]);
         } catch (error: any) {
-            Alert.alert('Error', error.response?.data?.message || 'Failed to create candidate');
+            const errDetail = error.response?.data?.message;
+            const message = Array.isArray(errDetail) ? errDetail.join('\n') : (errDetail || error.message || 'Failed to create candidate');
+            Alert.alert('Error', message);
         } finally {
             setSubmitting(false);
         }
@@ -210,7 +326,7 @@ export default function NewCandidateWizardScreen() {
                             <Text style={styles.label}>First Name *</Text>
                             <TextInput
                                 style={styles.input}
-                                placeholder="e.g. Genet"
+                                placeholder="First Name"
                                 value={formData.firstName}
                                 onChangeText={(val) => updateForm('firstName', val)}
                             />
@@ -219,7 +335,7 @@ export default function NewCandidateWizardScreen() {
                             <Text style={styles.label}>Father Name</Text>
                             <TextInput
                                 style={styles.input}
-                                placeholder="e.g. Bekele"
+                                placeholder="Father Name"
                                 value={formData.middleName}
                                 onChangeText={(val) => updateForm('middleName', val)}
                             />
@@ -229,7 +345,7 @@ export default function NewCandidateWizardScreen() {
                     <Text style={styles.label}>Grandfather / Last Name *</Text>
                     <TextInput
                         style={styles.input}
-                        placeholder="e.g. Tadesse"
+                        placeholder="Grandfather / Last Name"
                         value={formData.lastName}
                         onChangeText={(val) => updateForm('lastName', val)}
                     />
@@ -237,7 +353,7 @@ export default function NewCandidateWizardScreen() {
                     <Text style={styles.label}>Full Name in Amharic (ሙሉ ስም በሐበሻ)</Text>
                     <TextInput
                         style={styles.input}
-                        placeholder="ምሳሌ፡ ገነት በቀለ ታደሰ"
+                        placeholder="የአመልካች ሙሉ ስም"
                         value={formData.fullNameAmharic}
                         onChangeText={(val) => updateForm('fullNameAmharic', val)}
                     />
@@ -249,38 +365,53 @@ export default function NewCandidateWizardScreen() {
                             <TextInput
                                 style={styles.input}
                                 keyboardType="numeric"
+                                placeholder="e.g. 25"
                                 value={formData.age}
                                 onChangeText={(val) => updateForm('age', val)}
                             />
                         </View>
                         <View style={{ flex: 1, marginHorizontal: 6 }}>
-                            <Text style={styles.label}>Gender</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="female / male"
+                            <DropdownSelect
+                                label="Gender"
                                 value={formData.gender}
-                                onChangeText={(val) => updateForm('gender', val)}
+                                placeholder="Select Gender"
+                                options={[
+                                    { label: 'Female', value: 'female' },
+                                    { label: 'Male', value: 'male' },
+                                ]}
+                                onSelect={(val) => updateForm('gender', val)}
                             />
                         </View>
                         <View style={{ flex: 1, marginLeft: 6 }}>
-                            <Text style={styles.label}>Religion</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Muslim / Orthodox"
+                            <DropdownSelect
+                                label="Religion"
                                 value={formData.religion}
-                                onChangeText={(val) => updateForm('religion', val)}
+                                placeholder="Select Religion"
+                                options={[
+                                    { label: 'Muslim', value: 'Muslim' },
+                                    { label: 'Orthodox', value: 'Orthodox' },
+                                    { label: 'Protestant', value: 'Protestant' },
+                                    { label: 'Catholic', value: 'Catholic' },
+                                    { label: 'Other', value: 'Other' },
+                                ]}
+                                onSelect={(val) => updateForm('religion', val)}
                             />
                         </View>
                     </View>
 
                     <View style={styles.row}>
                         <View style={{ flex: 1, marginRight: 6 }}>
-                            <Text style={styles.label}>Marital Status</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Single / Married"
+                            <DropdownSelect
+                                label="Marital Status"
                                 value={formData.maritalStatus}
-                                onChangeText={(val) => updateForm('maritalStatus', val)}
+                                placeholder="Select Status"
+                                options={[
+                                    { label: 'Single', value: 'Single' },
+                                    { label: 'Married', value: 'Married' },
+                                    { label: 'Divorced', value: 'Divorced' },
+                                    { label: 'Widowed', value: 'Widowed' },
+                                ]}
+                                onSelect={(val) => updateForm('maritalStatus', val)}
                             />
                         </View>
                         <View style={{ flex: 1, marginLeft: 6 }}>
@@ -288,6 +419,7 @@ export default function NewCandidateWizardScreen() {
                             <TextInput
                                 style={styles.input}
                                 keyboardType="numeric"
+                                placeholder="0"
                                 value={formData.numberOfChildren}
                                 onChangeText={(val) => updateForm('numberOfChildren', val)}
                             />
@@ -300,7 +432,7 @@ export default function NewCandidateWizardScreen() {
                             <TextInput
                                 style={styles.input}
                                 keyboardType="numeric"
-                                placeholder="160"
+                                placeholder="e.g. 160"
                                 value={formData.heightCm}
                                 onChangeText={(val) => updateForm('heightCm', val)}
                             />
@@ -310,7 +442,7 @@ export default function NewCandidateWizardScreen() {
                             <TextInput
                                 style={styles.input}
                                 keyboardType="numeric"
-                                placeholder="55"
+                                placeholder="e.g. 55"
                                 value={formData.weightKg}
                                 onChangeText={(val) => updateForm('weightKg', val)}
                             />
@@ -335,7 +467,7 @@ export default function NewCandidateWizardScreen() {
                     <Text style={styles.label}>Phone Number</Text>
                     <TextInput
                         style={styles.input}
-                        placeholder="+251 91 123 4567"
+                        placeholder="+251 9..."
                         value={formData.phone}
                         onChangeText={(val) => updateForm('phone', val)}
                     />
@@ -345,18 +477,31 @@ export default function NewCandidateWizardScreen() {
                             <Text style={styles.label}>Current City</Text>
                             <TextInput
                                 style={styles.input}
-                                placeholder="Addis Ababa"
+                                placeholder="e.g. Addis Ababa"
                                 value={formData.city}
                                 onChangeText={(val) => updateForm('city', val)}
                             />
                         </View>
                         <View style={{ flex: 1, marginLeft: 6 }}>
-                            <Text style={styles.label}>Origin Region in Ethiopia</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Oromia / Amhara / SNNPR"
+                            <DropdownSelect
+                                label="Origin Region"
                                 value={formData.originRegion}
-                                onChangeText={(val) => updateForm('originRegion', val)}
+                                placeholder="Select Region"
+                                options={[
+                                    { label: 'Addis Ababa', value: 'Addis Ababa' },
+                                    { label: 'Oromia', value: 'Oromia' },
+                                    { label: 'Amhara', value: 'Amhara' },
+                                    { label: 'SNNPR', value: 'SNNPR' },
+                                    { label: 'Sidama', value: 'Sidama' },
+                                    { label: 'Tigray', value: 'Tigray' },
+                                    { label: 'Somali', value: 'Somali' },
+                                    { label: 'Afar', value: 'Afar' },
+                                    { label: 'Benishangul-Gumuz', value: 'Benishangul-Gumuz' },
+                                    { label: 'Gambela', value: 'Gambela' },
+                                    { label: 'Harari', value: 'Harari' },
+                                    { label: 'Dire Dawa', value: 'Dire Dawa' },
+                                ]}
+                                onSelect={(val) => updateForm('originRegion', val)}
                             />
                         </View>
                     </View>
@@ -365,7 +510,7 @@ export default function NewCandidateWizardScreen() {
                     <Text style={styles.label}>Emergency Contact Person Name</Text>
                     <TextInput
                         style={styles.input}
-                        placeholder="e.g. Almaz Bekele"
+                        placeholder="Emergency Contact Name"
                         value={formData.emergencyContactName}
                         onChangeText={(val) => updateForm('emergencyContactName', val)}
                     />
@@ -375,7 +520,7 @@ export default function NewCandidateWizardScreen() {
                             <Text style={styles.label}>Emergency Phone</Text>
                             <TextInput
                                 style={styles.input}
-                                placeholder="+251 92 888 7766"
+                                placeholder="+251 9..."
                                 value={formData.emergencyContactPhone}
                                 onChangeText={(val) => updateForm('emergencyContactPhone', val)}
                             />
@@ -402,7 +547,7 @@ export default function NewCandidateWizardScreen() {
                             <Text style={styles.label}>Passport Number</Text>
                             <TextInput
                                 style={styles.input}
-                                placeholder="EP1234567"
+                                placeholder="EP..."
                                 value={formData.passportNumber}
                                 onChangeText={(val) => updateForm('passportNumber', val)}
                             />
@@ -442,7 +587,7 @@ export default function NewCandidateWizardScreen() {
                     <Text style={styles.label}>National ID / FAN ID / Kebele ID</Text>
                     <TextInput
                         style={styles.input}
-                        placeholder="NID-88991122"
+                        placeholder="NID-..."
                         value={formData.nationalIdNumber}
                         onChangeText={(val) => updateForm('nationalIdNumber', val)}
                     />
@@ -450,42 +595,64 @@ export default function NewCandidateWizardScreen() {
                     <Text style={styles.sectionHeader}>MoLS Competency, Medical & Police Checks</Text>
                     <View style={styles.row}>
                         <View style={{ flex: 1, marginRight: 6 }}>
-                            <Text style={styles.label}>COC Certification Status</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="LEVEL_1 / LEVEL_2 / PASSED"
+                            <DropdownSelect
+                                label="COC Certification"
                                 value={formData.cocStatus}
-                                onChangeText={(val) => updateForm('cocStatus', val)}
+                                placeholder="Select COC Status"
+                                options={[
+                                    { label: 'Level 1 Certified', value: 'LEVEL_1' },
+                                    { label: 'Level 2 Certified', value: 'LEVEL_2' },
+                                    { label: 'Level 3 Certified', value: 'LEVEL_3' },
+                                    { label: 'Passed Assessment', value: 'PASSED' },
+                                    { label: 'Pending Assessment', value: 'PENDING' },
+                                    { label: 'Not Certified', value: 'NOT_CERTIFIED' },
+                                ]}
+                                onSelect={(val) => updateForm('cocStatus', val)}
                             />
                         </View>
                         <View style={{ flex: 1, marginLeft: 6 }}>
-                            <Text style={styles.label}>Medical Status</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="PASSED_GAMCA / PENDING"
+                            <DropdownSelect
+                                label="Medical Status"
                                 value={formData.medicalStatus}
-                                onChangeText={(val) => updateForm('medicalStatus', val)}
+                                placeholder="Select Medical"
+                                options={[
+                                    { label: 'Passed GAMCA / GCC', value: 'PASSED_GAMCA' },
+                                    { label: 'Passed Local Medical', value: 'PASSED_LOCAL' },
+                                    { label: 'Pending Examination', value: 'PENDING' },
+                                    { label: 'Unfit / Rejected', value: 'UNFIT' },
+                                ]}
+                                onSelect={(val) => updateForm('medicalStatus', val)}
                             />
                         </View>
                     </View>
 
                     <View style={styles.row}>
                         <View style={{ flex: 1, marginRight: 6 }}>
-                            <Text style={styles.label}>Police Clearance Status</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="CLEAN / PENDING"
+                            <DropdownSelect
+                                label="Police Clearance"
                                 value={formData.policeClearanceStatus}
-                                onChangeText={(val) => updateForm('policeClearanceStatus', val)}
+                                placeholder="Select Police Check"
+                                options={[
+                                    { label: 'Clean Record', value: 'CLEAN' },
+                                    { label: 'Pending Request', value: 'PENDING' },
+                                    { label: 'Attached', value: 'ATTACHED' },
+                                    { label: 'Not Submitted', value: 'NOT_SUBMITTED' },
+                                ]}
+                                onSelect={(val) => updateForm('policeClearanceStatus', val)}
                             />
                         </View>
                         <View style={{ flex: 1, marginLeft: 6 }}>
-                            <Text style={styles.label}>Visa Deployment Status</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="NO_VISA / VISA_ISSUED"
+                            <DropdownSelect
+                                label="Visa Deployment"
                                 value={formData.visaStatus}
-                                onChangeText={(val) => updateForm('visaStatus', val)}
+                                placeholder="Select Visa Status"
+                                options={[
+                                    { label: 'No Visa', value: 'NO_VISA' },
+                                    { label: 'Visa Applied', value: 'VISA_APPLIED' },
+                                    { label: 'Visa Issued', value: 'VISA_ISSUED' },
+                                    { label: 'Ready for Deployment', value: 'READY_FOR_DEPLOYMENT' },
+                                ]}
+                                onSelect={(val) => updateForm('visaStatus', val)}
                             />
                         </View>
                     </View>
@@ -498,18 +665,28 @@ export default function NewCandidateWizardScreen() {
                     <Text style={styles.sectionHeader}>Primary Specialty & Job Role</Text>
                     <View style={styles.row}>
                         <View style={{ flex: 1, marginRight: 6 }}>
-                            <Text style={styles.label}>Job Category ID *</Text>
-                            <TextInput
-                                style={styles.input}
+                            <DropdownSelect
+                                label="Job Category"
                                 value={formData.categoryId}
-                                onChangeText={(val) => updateForm('categoryId', val)}
+                                placeholder="Select Category"
+                                options={[
+                                    { label: 'Housemaid (የቤት ሰራተኛ)', value: 'housemaid' },
+                                    { label: 'Nanny / Childcare', value: 'nanny' },
+                                    { label: 'Cook / Chef', value: 'cook' },
+                                    { label: 'Elderly Caregiver', value: 'caregiver' },
+                                    { label: 'Driver', value: 'driver' },
+                                    { label: 'Cleaner', value: 'cleaner' },
+                                    { label: 'Hospitality Staff', value: 'hospitality' },
+                                    { label: 'General Worker', value: 'general_worker' },
+                                ]}
+                                onSelect={(val) => updateForm('categoryId', val)}
                             />
                         </View>
                         <View style={{ flex: 1, marginLeft: 6 }}>
                             <Text style={styles.label}>Applied Position Title</Text>
                             <TextInput
                                 style={styles.input}
-                                placeholder="Housemaid & Caregiver"
+                                placeholder="e.g. Housemaid & Cook"
                                 value={formData.appliedPosition}
                                 onChangeText={(val) => updateForm('appliedPosition', val)}
                             />
@@ -522,17 +699,24 @@ export default function NewCandidateWizardScreen() {
                             <TextInput
                                 style={styles.input}
                                 keyboardType="numeric"
+                                placeholder="e.g. 3"
                                 value={formData.yearsOfExperience}
                                 onChangeText={(val) => updateForm('yearsOfExperience', val)}
                             />
                         </View>
                         <View style={{ flex: 1, marginLeft: 6 }}>
-                            <Text style={styles.label}>Education Level</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="High School (10th Grade)"
+                            <DropdownSelect
+                                label="Education Level"
                                 value={formData.educationLevel}
-                                onChangeText={(val) => updateForm('educationLevel', val)}
+                                placeholder="Select Education"
+                                options={[
+                                    { label: 'Primary School (1-8)', value: 'Primary School' },
+                                    { label: 'High School (10th Grade)', value: 'High School (10th Grade)' },
+                                    { label: 'High School (12th Grade)', value: 'High School (12th Grade)' },
+                                    { label: 'TVET / Diploma', value: 'TVET / Diploma' },
+                                    { label: 'University Degree', value: 'University Degree' },
+                                ]}
+                                onSelect={(val) => updateForm('educationLevel', val)}
                             />
                         </View>
                     </View>
@@ -554,7 +738,7 @@ export default function NewCandidateWizardScreen() {
                             <Text style={styles.label}>Overseas Work Details</Text>
                             <TextInput
                                 style={styles.input}
-                                placeholder="e.g. 2 Years in Riyadh, Saudi Arabia as Housemaid"
+                                placeholder="e.g. 2 Years in Riyadh, Saudi Arabia"
                                 value={formData.overseasDetails}
                                 onChangeText={(val) => updateForm('overseasDetails', val)}
                             />
@@ -598,16 +782,24 @@ export default function NewCandidateWizardScreen() {
                             <TextInput
                                 style={styles.input}
                                 keyboardType="numeric"
+                                placeholder="e.g. 1200"
                                 value={formData.expectedSalary}
                                 onChangeText={(val) => updateForm('expectedSalary', val)}
                             />
                         </View>
                         <View style={{ flex: 1, marginHorizontal: 6 }}>
-                            <Text style={styles.label}>Currency</Text>
-                            <TextInput
-                                style={styles.input}
+                            <DropdownSelect
+                                label="Currency"
                                 value={formData.expectedSalaryCurrency}
-                                onChangeText={(val) => updateForm('expectedSalaryCurrency', val)}
+                                placeholder="Currency"
+                                options={[
+                                    { label: 'SAR (Saudi)', value: 'SAR' },
+                                    { label: 'AED (UAE)', value: 'AED' },
+                                    { label: 'QAR (Qatar)', value: 'QAR' },
+                                    { label: 'USD ($)', value: 'USD' },
+                                    { label: 'ETB (Birr)', value: 'ETB' },
+                                ]}
+                                onSelect={(val) => updateForm('expectedSalaryCurrency', val)}
                             />
                         </View>
                         <View style={{ flex: 1, marginLeft: 6 }}>
@@ -615,6 +807,7 @@ export default function NewCandidateWizardScreen() {
                             <TextInput
                                 style={styles.input}
                                 keyboardType="numeric"
+                                placeholder="2"
                                 value={formData.contractPeriodYears}
                                 onChangeText={(val) => updateForm('contractPeriodYears', val)}
                             />
@@ -630,45 +823,220 @@ export default function NewCandidateWizardScreen() {
                         onChangeText={(val) => updateForm('summary', val)}
                     />
 
-                    <Text style={styles.sectionHeader}>Media & Document Attachments</Text>
-                    <Text style={styles.label}>Headshot Profile Photo URL</Text>
+                    <Text style={styles.sectionHeader}>Media & Document Attachments (Camera / Gallery / URL)</Text>
+
+                    {/* Photo Picker */}
+                    <Text style={styles.label}>Headshot Profile Photo</Text>
+                    {formData.photoUrl ? (
+                        <View style={styles.mediaPreviewBox}>
+                            <Image source={{ uri: formData.photoUrl }} style={styles.previewThumb} />
+                            <Text style={styles.previewUriText} numberOfLines={1}>
+                                {formData.photoUrl}
+                            </Text>
+                            <TouchableOpacity onPress={() => updateForm('photoUrl', '')}>
+                                <Ionicons name="close-circle" size={22} color="#E53E3E" />
+                            </TouchableOpacity>
+                        </View>
+                    ) : null}
+                    <View style={styles.pickerBtnRow}>
+                        <TouchableOpacity
+                            style={styles.pickerBtn}
+                            onPress={() => pickMedia('photoUrl', 'image', 'gallery')}
+                        >
+                            <Ionicons name="images-outline" size={16} color="#1A365D" />
+                            <Text style={styles.pickerBtnText}>Gallery</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.pickerBtn}
+                            onPress={() => pickMedia('photoUrl', 'image', 'camera')}
+                        >
+                            <Ionicons name="camera-outline" size={16} color="#1A365D" />
+                            <Text style={styles.pickerBtnText}>Camera</Text>
+                        </TouchableOpacity>
+                    </View>
                     <TextInput
-                        style={styles.input}
-                        placeholder="https://cloudinary.com/headshot.jpg"
+                        style={[styles.input, { marginTop: 6 }]}
+                        placeholder="Or enter image URL (https://...)"
                         value={formData.photoUrl}
                         onChangeText={(val) => updateForm('photoUrl', val)}
                     />
 
-                    <Text style={styles.label}>Full-Body Standing Photo URL (Gulf Requirement)</Text>
+                    {/* Full Body Photo Picker */}
+                    <Text style={styles.label}>Full-Body Standing Photo (Gulf Employer Requirement)</Text>
+                    {formData.fullBodyPhotoUrl ? (
+                        <View style={styles.mediaPreviewBox}>
+                            <Image source={{ uri: formData.fullBodyPhotoUrl }} style={styles.previewThumb} />
+                            <Text style={styles.previewUriText} numberOfLines={1}>
+                                {formData.fullBodyPhotoUrl}
+                            </Text>
+                            <TouchableOpacity onPress={() => updateForm('fullBodyPhotoUrl', '')}>
+                                <Ionicons name="close-circle" size={22} color="#E53E3E" />
+                            </TouchableOpacity>
+                        </View>
+                    ) : null}
+                    <View style={styles.pickerBtnRow}>
+                        <TouchableOpacity
+                            style={styles.pickerBtn}
+                            onPress={() => pickMedia('fullBodyPhotoUrl', 'image', 'gallery')}
+                        >
+                            <Ionicons name="images-outline" size={16} color="#1A365D" />
+                            <Text style={styles.pickerBtnText}>Gallery</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.pickerBtn}
+                            onPress={() => pickMedia('fullBodyPhotoUrl', 'image', 'camera')}
+                        >
+                            <Ionicons name="camera-outline" size={16} color="#1A365D" />
+                            <Text style={styles.pickerBtnText}>Camera</Text>
+                        </TouchableOpacity>
+                    </View>
                     <TextInput
-                        style={styles.input}
-                        placeholder="https://cloudinary.com/full_body.jpg"
+                        style={[styles.input, { marginTop: 6 }]}
+                        placeholder="Or enter full-body image URL"
                         value={formData.fullBodyPhotoUrl}
                         onChangeText={(val) => updateForm('fullBodyPhotoUrl', val)}
                     />
 
-                    <Text style={styles.label}>Intro Video URL</Text>
+                    {/* Intro Video Picker */}
+                    <Text style={styles.label}>Candidate Introduction Video</Text>
+                    {formData.videoUrl ? (
+                        <View style={styles.mediaPreviewBox}>
+                            <Ionicons name="videocam" size={24} color="#319795" />
+                            <Text style={styles.previewUriText} numberOfLines={1}>
+                                {formData.videoUrl}
+                            </Text>
+                            <TouchableOpacity onPress={() => updateForm('videoUrl', '')}>
+                                <Ionicons name="close-circle" size={22} color="#E53E3E" />
+                            </TouchableOpacity>
+                        </View>
+                    ) : null}
+                    <View style={styles.pickerBtnRow}>
+                        <TouchableOpacity
+                            style={styles.pickerBtn}
+                            onPress={() => pickMedia('videoUrl', 'video', 'gallery')}
+                        >
+                            <Ionicons name="film-outline" size={16} color="#1A365D" />
+                            <Text style={styles.pickerBtnText}>Gallery Video</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.pickerBtn}
+                            onPress={() => pickMedia('videoUrl', 'video', 'camera')}
+                        >
+                            <Ionicons name="videocam-outline" size={16} color="#1A365D" />
+                            <Text style={styles.pickerBtnText}>Record Video</Text>
+                        </TouchableOpacity>
+                    </View>
                     <TextInput
-                        style={styles.input}
-                        placeholder="https://cloudinary.com/intro.mp4"
+                        style={[styles.input, { marginTop: 6 }]}
+                        placeholder="Or enter video URL (https://...)"
                         value={formData.videoUrl}
                         onChangeText={(val) => updateForm('videoUrl', val)}
                     />
 
-                    <Text style={styles.label}>Passport Scan Document URL</Text>
+                    {/* Document Scans (Gallery / Camera / URL) */}
+                    <Text style={styles.label}>Passport Scan Document</Text>
+                    {formData.passportCopyUrl ? (
+                        <View style={styles.mediaPreviewBox}>
+                            <Ionicons name="document-text" size={24} color="#2B6CB0" />
+                            <Text style={styles.previewUriText} numberOfLines={1}>
+                                {formData.passportCopyUrl}
+                            </Text>
+                            <TouchableOpacity onPress={() => updateForm('passportCopyUrl', '')}>
+                                <Ionicons name="close-circle" size={22} color="#E53E3E" />
+                            </TouchableOpacity>
+                        </View>
+                    ) : null}
+                    <View style={styles.pickerBtnRow}>
+                        <TouchableOpacity
+                            style={styles.pickerBtn}
+                            onPress={() => pickMedia('passportCopyUrl', 'image', 'gallery')}
+                        >
+                            <Ionicons name="images-outline" size={16} color="#1A365D" />
+                            <Text style={styles.pickerBtnText}>Gallery</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.pickerBtn}
+                            onPress={() => pickMedia('passportCopyUrl', 'image', 'camera')}
+                        >
+                            <Ionicons name="camera-outline" size={16} color="#1A365D" />
+                            <Text style={styles.pickerBtnText}>Take Photo</Text>
+                        </TouchableOpacity>
+                    </View>
                     <TextInput
-                        style={styles.input}
-                        placeholder="https://cloudinary.com/passport.pdf"
+                        style={[styles.input, { marginTop: 6 }]}
+                        placeholder="Or enter passport document URL (https://...)"
                         value={formData.passportCopyUrl}
                         onChangeText={(val) => updateForm('passportCopyUrl', val)}
                     />
 
-                    <Text style={styles.label}>Medical Certificate Copy URL</Text>
+                    <Text style={styles.label}>Medical Certificate Copy</Text>
+                    {formData.medicalCertUrl ? (
+                        <View style={styles.mediaPreviewBox}>
+                            <Ionicons name="medkit" size={24} color="#319795" />
+                            <Text style={styles.previewUriText} numberOfLines={1}>
+                                {formData.medicalCertUrl}
+                            </Text>
+                            <TouchableOpacity onPress={() => updateForm('medicalCertUrl', '')}>
+                                <Ionicons name="close-circle" size={22} color="#E53E3E" />
+                            </TouchableOpacity>
+                        </View>
+                    ) : null}
+                    <View style={styles.pickerBtnRow}>
+                        <TouchableOpacity
+                            style={styles.pickerBtn}
+                            onPress={() => pickMedia('medicalCertUrl', 'image', 'gallery')}
+                        >
+                            <Ionicons name="images-outline" size={16} color="#1A365D" />
+                            <Text style={styles.pickerBtnText}>Gallery</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.pickerBtn}
+                            onPress={() => pickMedia('medicalCertUrl', 'image', 'camera')}
+                        >
+                            <Ionicons name="camera-outline" size={16} color="#1A365D" />
+                            <Text style={styles.pickerBtnText}>Take Photo</Text>
+                        </TouchableOpacity>
+                    </View>
                     <TextInput
-                        style={styles.input}
-                        placeholder="https://cloudinary.com/medical.pdf"
+                        style={[styles.input, { marginTop: 6 }]}
+                        placeholder="Or enter medical certificate URL (https://...)"
                         value={formData.medicalCertUrl}
                         onChangeText={(val) => updateForm('medicalCertUrl', val)}
+                    />
+
+                    <Text style={styles.label}>COC Competency Certificate Copy</Text>
+                    {formData.cocCertUrl ? (
+                        <View style={styles.mediaPreviewBox}>
+                            <Ionicons name="ribbon" size={24} color="#D69E2E" />
+                            <Text style={styles.previewUriText} numberOfLines={1}>
+                                {formData.cocCertUrl}
+                            </Text>
+                            <TouchableOpacity onPress={() => updateForm('cocCertUrl', '')}>
+                                <Ionicons name="close-circle" size={22} color="#E53E3E" />
+                            </TouchableOpacity>
+                        </View>
+                    ) : null}
+                    <View style={styles.pickerBtnRow}>
+                        <TouchableOpacity
+                            style={styles.pickerBtn}
+                            onPress={() => pickMedia('cocCertUrl', 'image', 'gallery')}
+                        >
+                            <Ionicons name="images-outline" size={16} color="#1A365D" />
+                            <Text style={styles.pickerBtnText}>Gallery</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.pickerBtn}
+                            onPress={() => pickMedia('cocCertUrl', 'image', 'camera')}
+                        >
+                            <Ionicons name="camera-outline" size={16} color="#1A365D" />
+                            <Text style={styles.pickerBtnText}>Take Photo</Text>
+                        </TouchableOpacity>
+                    </View>
+                    <TextInput
+                        style={[styles.input, { marginTop: 6 }]}
+                        placeholder="Or enter COC certificate URL (https://...)"
+                        value={formData.cocCertUrl}
+                        onChangeText={(val) => updateForm('cocCertUrl', val)}
                     />
 
                     <View style={styles.switchRow}>
@@ -725,6 +1093,22 @@ const styles = StyleSheet.create({
     label: { fontSize: 12, fontWeight: '600', color: '#4A5568', marginTop: 10, marginBottom: 4 },
     input: { backgroundColor: '#EDF2F7', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 9, color: '#2D3748', fontSize: 13 },
     row: { flexDirection: 'row' },
+    dropdownBtn: { backgroundColor: '#EDF2F7', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    dropdownBtnText: { color: '#2D3748', fontSize: 13, fontWeight: '500' },
+    dropdownPlaceholder: { color: '#A0AEC0', fontSize: 13 },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', paddingHorizontal: 24 },
+    modalCard: { backgroundColor: '#FFFFFF', borderRadius: 14, padding: 18, elevation: 5 },
+    modalTitle: { fontSize: 16, fontWeight: 'bold', color: '#1A365D', marginBottom: 12, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', paddingBottom: 8 },
+    optionItem: { paddingVertical: 12, paddingHorizontal: 8, borderBottomWidth: 1, borderBottomColor: '#EDF2F7', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    optionItemActive: { backgroundColor: '#EBF8FF' },
+    optionText: { fontSize: 14, color: '#4A5568' },
+    optionTextActive: { fontWeight: 'bold', color: '#1A365D' },
+    pickerBtnRow: { flexDirection: 'row', gap: 10, marginTop: 4 },
+    pickerBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#E2E8F0', paddingVertical: 8, borderRadius: 6 },
+    pickerBtnText: { fontSize: 12, color: '#1A365D', fontWeight: '600' },
+    mediaPreviewBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#EDF2F7', padding: 8, borderRadius: 8, marginTop: 6 },
+    previewThumb: { width: 36, height: 36, borderRadius: 4 },
+    previewUriText: { flex: 1, fontSize: 11, color: '#4A5568' },
     switchRow: { flexDirection: 'row', alignItems: 'center', marginTop: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E2E8F0' },
     switchTitle: { fontSize: 14, fontWeight: 'bold', color: '#2D3748' },
     switchSub: { fontSize: 11, color: '#718096', marginTop: 2 },

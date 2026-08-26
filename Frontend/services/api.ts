@@ -60,28 +60,33 @@ export function getErrorMessage(error: any): string {
     return error.message || 'Request failed';
 }
 
-// Attach user JWT to requests
+// Attach user or admin JWT to requests intelligently
 api.interceptors.request.use((config) => {
     const token = useAuthStore.getState().token;
     const adminToken = useAdminAuthStore.getState().adminToken;
 
-    // Use admin token for admin routes
-    if (config.url?.startsWith('/admin') && adminToken) {
-        config.headers.Authorization = `Bearer ${adminToken}`;
-    } else if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+    const url = config.url || '';
+    const isAdminRoute = url.startsWith('/admin') || url.startsWith('admin') || url.includes('/admin/');
+
+    const bearerToken = isAdminRoute
+        ? (adminToken || token)
+        : (token || adminToken);
+
+    if (bearerToken) {
+        config.headers.Authorization = `Bearer ${bearerToken}`;
     }
 
     return config;
 });
 
-// Handle 401 responses (expired tokens)
+// Handle 401 responses gracefully
 api.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response?.status === 401) {
             const url = error.config?.url || '';
-            if (url.startsWith('/admin')) {
+            const isAdminRoute = url.startsWith('/admin') || url.startsWith('admin') || url.includes('/admin/');
+            if (isAdminRoute) {
                 useAdminAuthStore.getState().logout();
             } else {
                 useAuthStore.getState().logout();

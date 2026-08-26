@@ -147,11 +147,40 @@ export class VacanciesService {
         };
     }
 
+    // Helper to safely resolve category ID from ID or name slug
+    private async resolveCategoryId(categoryId?: string): Promise<string> {
+        if (categoryId) {
+            const existingCategory = await this.prisma.category.findFirst({
+                where: {
+                    OR: [
+                        { id: categoryId },
+                        { name: { equals: categoryId, mode: 'insensitive' } },
+                    ],
+                },
+            });
+            if (existingCategory) {
+                return existingCategory.id;
+            }
+        }
+
+        let fallback = await this.prisma.category.findFirst();
+        if (!fallback) {
+            fallback = await this.prisma.category.create({
+                data: {
+                    name: 'Housemaid',
+                    description: 'General household cleaning and maintenance',
+                },
+            });
+        }
+        return fallback.id;
+    }
+
     async createAdmin(agencyId: string, dto: CreateVacancyDto) {
+        const categoryIdToUse = await this.resolveCategoryId(dto.categoryId);
         const vacancy = await this.prisma.jobVacancy.create({
             data: {
                 agencyId,
-                categoryId: dto.categoryId,
+                categoryId: categoryIdToUse,
                 title: dto.title,
                 jobCode: dto.jobCode,
                 description: dto.description,

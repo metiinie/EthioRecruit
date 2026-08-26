@@ -93,6 +93,7 @@ export class AuthService {
                 include: { agency: true },
             });
             if (adminUser) {
+                const adminToken = this.signAdminToken(adminUser.id, adminUser.role, adminUser.agencyId);
                 adminProfile = {
                     id: adminUser.id,
                     email: adminUser.email,
@@ -101,6 +102,7 @@ export class AuthService {
                     role: adminUser.role,
                     agencyId: adminUser.agencyId,
                     agency: adminUser.agency,
+                    token: adminToken,
                 };
             }
         }
