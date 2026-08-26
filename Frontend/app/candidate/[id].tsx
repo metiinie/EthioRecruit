@@ -30,6 +30,25 @@ export default function CandidateDetailScreen() {
     const [inquiryModalVisible, setInquiryModalVisible] = useState(false);
     const [inquiryMessage, setInquiryMessage] = useState('');
     const [submittingInquiry, setSubmittingInquiry] = useState(false);
+    const [exportingCv, setExportingCv] = useState(false);
+
+    const handleExportCv = async () => {
+        if (!id) return;
+        setExportingCv(true);
+        try {
+            const res = await candidateService.getExportCv(id);
+            const cvData = res.data;
+            Alert.alert(
+                'Recruitment CV Generated',
+                `Official Candidate Recruitment Profile for ${cvData.candidate.firstName} ${cvData.candidate.lastName} (Ref: ${cvData.candidate.id.slice(0, 8).toUpperCase()}) is ready.\n\nPosition: ${cvData.candidate.appliedPosition || 'Domestic Worker'}\nAgency: ${cvData.candidate.agency?.name || 'EthioRecruit Agency'}`,
+                [{ text: 'OK', style: 'cancel' }]
+            );
+        } catch (error: any) {
+            Alert.alert('Error', error.response?.data?.error?.message || 'Failed to export candidate CV');
+        } finally {
+            setExportingCv(false);
+        }
+    };
 
     useEffect(() => {
         if (id) {
@@ -155,22 +174,37 @@ export default function CandidateDetailScreen() {
                         {candidate.firstName} {candidate.lastName}
                     </Text>
 
-                    <TouchableOpacity
-                        style={styles.bookmarkButton}
-                        onPress={toggleSave}
-                        disabled={togglingSave}
-                        activeOpacity={0.7}
-                    >
-                        {togglingSave ? (
-                            <ActivityIndicator size="small" color={Colors.white} />
-                        ) : (
-                            <Ionicons
-                                name={isSaved ? 'bookmark' : 'bookmark-outline'}
-                                size={22}
-                                color={isSaved ? Colors.warning : Colors.white}
-                            />
-                        )}
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                        <TouchableOpacity
+                            style={styles.bookmarkButton}
+                            onPress={handleExportCv}
+                            disabled={exportingCv}
+                            activeOpacity={0.7}
+                        >
+                            {exportingCv ? (
+                                <ActivityIndicator size="small" color={Colors.white} />
+                            ) : (
+                                <Ionicons name="document-text-outline" size={20} color={Colors.white} />
+                            )}
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.bookmarkButton}
+                            onPress={toggleSave}
+                            disabled={togglingSave}
+                            activeOpacity={0.7}
+                        >
+                            {togglingSave ? (
+                                <ActivityIndicator size="small" color={Colors.white} />
+                            ) : (
+                                <Ionicons
+                                    name={isSaved ? 'bookmark' : 'bookmark-outline'}
+                                    size={22}
+                                    color={isSaved ? Colors.warning : Colors.white}
+                                />
+                            )}
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </SafeAreaView>
 
