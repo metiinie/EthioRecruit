@@ -163,11 +163,6 @@ export default function AdminDashboard() {
                         <Text style={styles.orgName}>{admin?.organization?.name || 'EthioRecruit Authorized Agency'}</Text>
                     </View>
                 </View>
-
-                <TouchableOpacity style={styles.logoutPill} onPress={handleLogout} activeOpacity={0.8}>
-                    <Ionicons name="log-out-outline" size={18} color="#EF4444" />
-                    <Text style={styles.logoutText}>Logout</Text>
-                </TouchableOpacity>
             </View>
 
             {/* Section Title */}

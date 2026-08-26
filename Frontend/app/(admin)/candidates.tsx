@@ -244,16 +244,37 @@ export default function AdminCandidatesScreen() {
                                         </Text>
                                     </View>
 
-                                    <View style={[
-                                        styles.medBadge,
-                                        cand.medicalStatus === 'PASSED' ? styles.medCleared : styles.medPending
-                                    ]}>
-                                        <Text style={[
-                                            styles.medText,
-                                            cand.medicalStatus === 'PASSED' ? { color: '#059669' } : { color: '#D97706' }
+                                    {/* Top Right Actions Group (Medical Badge + Clear Edit & Trash Icons) */}
+                                    <View style={styles.topRightHeaderGroup}>
+                                        <View style={[
+                                            styles.medBadge,
+                                            cand.medicalStatus === 'PASSED' ? styles.medCleared : styles.medPending
                                         ]}>
-                                            Med: {cand.medicalStatus || 'PENDING'}
-                                        </Text>
+                                            <Text style={[
+                                                styles.medText,
+                                                cand.medicalStatus === 'PASSED' ? { color: '#059669' } : { color: '#D97706' }
+                                            ]}>
+                                                Med: {cand.medicalStatus || 'PENDING'}
+                                            </Text>
+                                        </View>
+
+                                        <View style={styles.iconActionsRow}>
+                                            <TouchableOpacity
+                                                style={styles.topActionIconBtn}
+                                                onPress={() => openEditModal(cand)}
+                                                activeOpacity={0.7}
+                                            >
+                                                <Ionicons name="create-outline" size={18} color="#2563EB" />
+                                            </TouchableOpacity>
+
+                                            <TouchableOpacity
+                                                style={[styles.topActionIconBtn, { backgroundColor: '#FEF2F2', borderColor: '#FCA5A5' }]}
+                                                onPress={() => handleDeleteCandidate(cand)}
+                                                activeOpacity={0.7}
+                                            >
+                                                <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                                            </TouchableOpacity>
+                                        </View>
                                     </View>
                                 </View>
 
@@ -282,27 +303,6 @@ export default function AdminCandidatesScreen() {
                                             <Text style={[styles.metaChipText, { color: '#1D4ED8', fontWeight: '700' }]}>✈️ Gulf Exp</Text>
                                         </View>
                                     ) : null}
-                                </View>
-
-                                {/* Action Buttons Footer */}
-                                <View style={styles.cardFooter}>
-                                    <TouchableOpacity
-                                        style={styles.editBtn}
-                                        onPress={() => openEditModal(cand)}
-                                        activeOpacity={0.7}
-                                    >
-                                        <Ionicons name="create-outline" size={16} color="#2563EB" />
-                                        <Text style={styles.editBtnText}>Edit Record</Text>
-                                    </TouchableOpacity>
-
-                                    <TouchableOpacity
-                                        style={styles.deleteBtn}
-                                        onPress={() => handleDeleteCandidate(cand)}
-                                        activeOpacity={0.7}
-                                    >
-                                        <Ionicons name="trash-outline" size={16} color="#EF4444" />
-                                        <Text style={styles.deleteBtnText}>Remove</Text>
-                                    </TouchableOpacity>
                                 </View>
                             </View>
                         ))
@@ -477,6 +477,18 @@ const styles = StyleSheet.create({
     candName: { fontSize: 16, fontWeight: '800', color: '#0F172A' },
     candAmharic: { fontSize: 13, color: '#10B981', fontWeight: '700', marginTop: 1 },
     candSub: { fontSize: 12, color: '#64748B', marginTop: 2, fontWeight: '500' },
+    topRightHeaderGroup: { alignItems: 'flex-end', gap: 6 },
+    iconActionsRow: { flexDirection: 'row', gap: 6, marginTop: 4 },
+    topActionIconBtn: {
+        width: 32,
+        height: 32,
+        borderRadius: 8,
+        backgroundColor: '#EFF6FF',
+        borderWidth: 1,
+        borderColor: '#BFDBFE',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     medBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0' },
     medCleared: { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' },
     medPending: { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' },

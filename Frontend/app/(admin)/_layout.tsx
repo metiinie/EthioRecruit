@@ -71,9 +71,9 @@ export default function AdminLayout() {
             <Tabs.Screen
                 name="settings"
                 options={{
-                    title: 'Credentials',
+                    title: 'Profile',
                     tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="shield-checkmark-outline" size={size} color={color} />
+                        <Ionicons name="person-circle-outline" size={size} color={color} />
                     ),
                 }}
             />

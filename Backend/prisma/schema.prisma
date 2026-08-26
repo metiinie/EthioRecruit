@@ -105,6 +105,9 @@ model Organization {
   country          String?
   city             String?
   address          String?
+  subscriptionPlan   String?                @default("PRO_AGENCY") @map("subscription_plan")
+  subscriptionStatus String?                @default("ACTIVE") @map("subscription_status")
+  subscriptionEndsAt DateTime?              @map("subscription_ends_at")
   isVerified       Boolean                @default(false) @map("is_verified")
   isActive         Boolean                @default(true) @map("is_active")
   createdAt        DateTime               @default(now()) @map("created_at")
@@ -168,18 +171,21 @@ model AgencySetting {
 }
 
 model AdminUser {
-  id        String       @id @default(uuid())
-  agencyId  String       @map("agency_id")
-  firstName String       @map("first_name")
-  lastName  String       @map("last_name")
-  email     String       @unique
-  password  String
-  role      Role         @default(ADMIN)
-  isActive  Boolean      @default(true) @map("is_active")
-  createdAt DateTime     @default(now()) @map("created_at")
-  updatedAt DateTime     @updatedAt @map("updated_at")
+  id         String       @id @default(uuid())
+  agencyId   String       @map("agency_id")
+  firstName  String       @map("first_name")
+  lastName   String       @map("last_name")
+  email      String       @unique
+  phone      String?
+  title      String?
+  department String?
+  password   String
+  role       Role         @default(ADMIN)
+  isActive   Boolean      @default(true) @map("is_active")
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
 
-  agency    Organization @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  agency     Organization @relation(fields: [agencyId], references: [id], onDelete: Cascade)
 
   @@map("admin_users")
 }

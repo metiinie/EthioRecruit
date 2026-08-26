@@ -12,5 +12,5 @@ export const adminService = {
     getSettings: () => api.get('/admin/settings').then((r) => r.data),
     updateSettings: (data: any) => api.put('/admin/settings', data).then((r) => r.data),
     addContactChannel: (data: { type: string; value: string; label?: string }) =>
-        api.post('/admin/settings/contact-channels', data).then((r) => r.data),
+        api.post('/admin/settings/channels', data).then((r) => r.data),
 };
