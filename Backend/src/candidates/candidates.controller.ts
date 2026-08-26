@@ -27,6 +27,11 @@ export class CandidatesController {
         return this.candidatesService.findOnePublic(id);
     }
 
+    @Get(':id/cv')
+    exportCv(@Param('id') id: string) {
+        return this.candidatesService.generateCvData(id);
+    }
+
     @Post(':id/inquiry')
     createInquiry(
         @Param('id') id: string,

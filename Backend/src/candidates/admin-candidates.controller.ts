@@ -61,4 +61,12 @@ export class AdminCandidatesController {
     ) {
         return this.candidatesService.updateMedicalAdmin(id, agencyId, body);
     }
+
+    @Get(':id/cv')
+    exportCv(
+        @Param('id') id: string,
+        @AgencyId() agencyId: string,
+    ) {
+        return this.candidatesService.generateCvData(id, agencyId);
+    }
 }

@@ -27,4 +27,7 @@ export const candidateService = {
 
     updateMedical: (id: string, data: any) =>
         api.put(`/admin/candidates/${id}/medical`, data).then((r) => r.data),
+
+    getExportCv: (id: string) =>
+        api.get(`/candidates/${id}/cv`).then((r) => r.data),
 };
