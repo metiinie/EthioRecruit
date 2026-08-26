@@ -11,8 +11,8 @@ import {
     TextInput,
     Alert,
     StatusBar,
-    SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius } from '../../constants';
@@ -430,7 +430,7 @@ const styles = StyleSheet.create({
     headerNavContent: {
         flexDirection: 'row',
         alignItems: 'center',
-        justify.content: 'space-between',
+        justifyContent: 'space-between',
         paddingHorizontal: Spacing.md,
         paddingVertical: 14,
     },
@@ -664,7 +664,7 @@ const styles = StyleSheet.create({
         height: 48,
         borderRadius: BorderRadius.xl,
         flexDirection: 'row',
-        justify.content: 'center',
+        justifyContent: 'center',
         alignItems: 'center',
         gap: 8,
     },
