@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius } from '../../constants';
 import { authService } from '../../services/authService';
+import { getErrorMessage } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
 
 export default function LoginScreen() {
@@ -25,21 +26,30 @@ export default function LoginScreen() {
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
 
+    const sanitizePhone = (raw: string): string => {
+        let digits = raw.replace(/\D/g, '');
+        if (digits.startsWith('251')) {
+            digits = digits.slice(3);
+        }
+        digits = digits.replace(/^0+/, '');
+        return `+251${digits}`;
+    };
+
     const handleLogin = async () => {
-        if (!phone || !password) {
-            Alert.alert('Error', 'Please fill in all fields');
+        if (!phone.trim() || !password) {
+            Alert.alert('Missing Fields', 'Please fill in all fields');
             return;
         }
 
         setLoading(true);
         try {
-            const formattedPhone = phone.startsWith('+251') ? phone : `+251${phone.replace(/^0/, '')}`;
+            const formattedPhone = sanitizePhone(phone);
             const response = await authService.login({ phone: formattedPhone, password });
             setAuth(response.data.user, response.data.token);
             router.replace('/(tabs)');
         } catch (error: any) {
-            const msg = error.response?.data?.error?.message || 'Login failed';
-            Alert.alert('Error', msg);
+            const msg = getErrorMessage(error);
+            Alert.alert('Login Failed', msg);
         } finally {
             setLoading(false);
         }

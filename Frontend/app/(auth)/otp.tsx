@@ -11,6 +11,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius } from '../../constants';
 import { authService } from '../../services/authService';
+import { getErrorMessage } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
 
 export default function OtpScreen() {
@@ -64,8 +65,8 @@ export default function OtpScreen() {
             setAuth(response.data.user, response.data.token);
             router.replace('/(auth)/mode-select');
         } catch (error: any) {
-            const msg = error.response?.data?.error?.message || 'Invalid OTP';
-            Alert.alert('Error', msg);
+            const msg = getErrorMessage(error);
+            Alert.alert('Verification Failed', msg);
             setCode(['', '', '', '', '', '']);
             inputs.current[0]?.focus();
         } finally {
@@ -78,8 +79,9 @@ export default function OtpScreen() {
             await authService.sendOtp(params.phone!);
             setCountdown(60);
             Alert.alert('Success', 'OTP resent successfully');
-        } catch {
-            Alert.alert('Error', 'Failed to resend OTP');
+        } catch (error: any) {
+            const msg = getErrorMessage(error);
+            Alert.alert('Resend Failed', msg);
         }
     };
 

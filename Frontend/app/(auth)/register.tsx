@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius } from '../../constants';
 import { authService } from '../../services/authService';
+import { getErrorMessage } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
 
 export default function RegisterScreen() {
@@ -28,26 +29,43 @@ export default function RegisterScreen() {
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
 
+    const sanitizePhone = (raw: string): string => {
+        let digits = raw.replace(/\D/g, '');
+        if (digits.startsWith('251')) {
+            digits = digits.slice(3);
+        }
+        digits = digits.replace(/^0+/, '');
+        return `+251${digits}`;
+    };
+
     const handleRegister = async () => {
-        if (!firstName || !lastName || !phone || !password) {
-            Alert.alert('Error', 'Please fill in all fields');
+        if (!firstName.trim() || !lastName.trim() || !phone.trim() || !password) {
+            Alert.alert('Missing Fields', 'Please fill in all fields');
             return;
         }
         if (password !== confirmPassword) {
-            Alert.alert('Error', 'Passwords do not match');
+            Alert.alert('Password Mismatch', 'Passwords do not match');
             return;
         }
         if (password.length < 6) {
-            Alert.alert('Error', 'Password must be at least 6 characters');
+            Alert.alert('Weak Password', 'Password must be at least 6 characters');
+            return;
+        }
+
+        const formattedPhone = sanitizePhone(phone);
+        if (!/^\+251[0-9]{9}$/.test(formattedPhone)) {
+            Alert.alert(
+                'Invalid Phone Number',
+                'Please enter a valid 9-digit Ethiopian mobile number (e.g. 912345678 or 712345678)'
+            );
             return;
         }
 
         setLoading(true);
         try {
-            const formattedPhone = phone.startsWith('+251') ? phone : `+251${phone.replace(/^0/, '')}`;
             const response = await authService.register({
-                firstName,
-                lastName,
+                firstName: firstName.trim(),
+                lastName: lastName.trim(),
                 phone: formattedPhone,
                 password,
             });
@@ -57,12 +75,13 @@ export default function RegisterScreen() {
                 params: { phone: formattedPhone },
             });
         } catch (error: any) {
-            const msg = error.response?.data?.error?.message || 'Registration failed';
-            Alert.alert('Error', msg);
+            const msg = getErrorMessage(error);
+            Alert.alert('Registration Failed', msg);
         } finally {
             setLoading(false);
         }
     };
+
 
     return (
         <KeyboardAvoidingView
