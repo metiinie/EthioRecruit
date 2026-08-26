@@ -3,7 +3,7 @@ import api from './api';
 export const adminService = {
     // Staff
     getStaff: () => api.get('/admin/staff').then((r) => r.data),
-    addStaff: (data: { email: string; firstName: string; lastName: string; role: string; password?: string }) =>
+    addStaff: (data: { email: string; firstName: string; lastName?: string; phone?: string; title?: string; department?: string; role: string; password?: string }) =>
         api.post('/admin/staff', data).then((r) => r.data),
     toggleStaffActive: (id: string, isActive: boolean) =>
         api.put(`/admin/staff/${id}/active`, { isActive }).then((r) => r.data),

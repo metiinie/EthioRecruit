@@ -91,7 +91,16 @@ export default function OtpScreen() {
 
     return (
         <View style={styles.container}>
-            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => {
+                    if (router.canGoBack()) {
+                        router.back();
+                    } else {
+                        router.replace('/(auth)/register');
+                    }
+                }}
+            >
                 <Ionicons name="arrow-back" size={24} color={Colors.white} />
             </TouchableOpacity>
 

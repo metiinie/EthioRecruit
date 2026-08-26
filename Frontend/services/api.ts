@@ -60,7 +60,7 @@ export function getErrorMessage(error: any): string {
     return error.message || 'Request failed';
 }
 
-// Attach user or admin JWT to requests intelligently
+// Attach user or admin JWT to requests with strict session isolation
 api.interceptors.request.use((config) => {
     const token = useAuthStore.getState().token;
     const adminToken = useAdminAuthStore.getState().adminToken;
@@ -68,9 +68,8 @@ api.interceptors.request.use((config) => {
     const url = config.url || '';
     const isAdminRoute = url.startsWith('/admin') || url.startsWith('admin') || url.includes('/admin/');
 
-    const bearerToken = isAdminRoute
-        ? (adminToken || token)
-        : (token || adminToken);
+    // Strict security isolation: Admin routes ONLY use adminToken; User routes ONLY use user token
+    const bearerToken = isAdminRoute ? adminToken : token;
 
     if (bearerToken) {
         config.headers.Authorization = `Bearer ${bearerToken}`;

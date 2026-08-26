@@ -89,7 +89,17 @@ export default function RegisterScreen() {
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
             <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-                <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.7}>
+                <TouchableOpacity
+                    style={styles.backButton}
+                    onPress={() => {
+                        if (router.canGoBack()) {
+                            router.back();
+                        } else {
+                            router.replace('/(auth)/welcome');
+                        }
+                    }}
+                    activeOpacity={0.7}
+                >
                     <Ionicons name="arrow-back" size={24} color={Colors.white} />
                 </TouchableOpacity>
 

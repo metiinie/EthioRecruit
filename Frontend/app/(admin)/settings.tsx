@@ -204,7 +204,7 @@ export default function AgencyProfileScreen() {
                 style: 'destructive',
                 onPress: () => {
                     logout();
-                    router.replace('/(admin)/login' as any);
+                    router.replace('/(auth)/admin-login' as any);
                 },
             },
         ]);
@@ -302,6 +302,44 @@ export default function AgencyProfileScreen() {
                             <Text style={styles.heroActionText}>Email</Text>
                         </TouchableOpacity>
                     </View>
+                </View>
+
+                {/* Subscription & Billing Package Card */}
+                <View style={[styles.card, { backgroundColor: '#FEFCE8', borderColor: '#FEF08A' }]}>
+                    <View style={styles.cardTitleRow}>
+                        <Ionicons name="ribbon" size={20} color="#D97706" />
+                        <View style={{ flex: 1 }}>
+                            <Text style={[styles.cardHeaderTitle, { color: '#854D0E' }]}>EthioRecruit SaaS Subscription</Text>
+                            <Text style={{ fontSize: 11, color: '#A16207', fontWeight: '600' }}>Active Workspace Plan</Text>
+                        </View>
+                        <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: '#FDE68A' }}>
+                            <Text style={{ fontSize: 11, fontWeight: '900', color: '#B45309' }}>PRO AGENCY</Text>
+                        </View>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', gap: 12, marginVertical: 10, backgroundColor: '#FFFFFF', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#FEF08A' }}>
+                        <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8' }}>Candidate Limit</Text>
+                            <Text style={{ fontSize: 15, fontWeight: '900', color: '#0F172A', marginTop: 2 }}>Unlimited</Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8' }}>Billing Cycle</Text>
+                            <Text style={{ fontSize: 15, fontWeight: '900', color: '#059669', marginTop: 2 }}>Annual Paid</Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8' }}>Expires On</Text>
+                            <Text style={{ fontSize: 13, fontWeight: '800', color: '#D97706', marginTop: 2 }}>Dec 31, 2026</Text>
+                        </View>
+                    </View>
+
+                    <TouchableOpacity
+                        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#D97706', paddingVertical: 10, borderRadius: 10 }}
+                        onPress={() => Alert.alert('EthioRecruit SaaS Billing', 'Your agency is currently on the active Pro Agency Tier. Contact EthioRecruit Support to renew or upgrade.')}
+                        activeOpacity={0.8}
+                    >
+                        <Ionicons name="card-outline" size={16} color="#FFFFFF" />
+                        <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 13 }}>Manage Plan & Billing</Text>
+                    </TouchableOpacity>
                 </View>
 
                 {/* About & Bio Card */}

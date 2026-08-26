@@ -71,7 +71,16 @@ export default function AdminLoginScreen() {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
             <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-                <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                <TouchableOpacity
+                    style={styles.backButton}
+                    onPress={() => {
+                        if (router.canGoBack()) {
+                            router.back();
+                        } else {
+                            router.replace('/(auth)/welcome');
+                        }
+                    }}
+                >
                     <Ionicons name="arrow-back" size={24} color={Colors.white} />
                 </TouchableOpacity>
 

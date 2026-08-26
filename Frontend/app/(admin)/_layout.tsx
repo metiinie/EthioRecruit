@@ -1,25 +1,38 @@
-import { Tabs } from 'expo-router';
+import { Tabs, Redirect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../constants';
+import { useAdminAuthStore } from '../../stores/adminAuthStore';
 
 export default function AdminLayout() {
+    const isAdminAuthenticated = useAdminAuthStore((s) => s.isAdminAuthenticated);
+
+    // Security Route Guard: If not authenticated as Admin, redirect immediately to Admin Login
+    if (!isAdminAuthenticated) {
+        return <Redirect href="/(auth)/admin-login" />;
+    }
+
     return (
         <Tabs
             screenOptions={{
                 headerShown: false,
                 tabBarStyle: {
-                    backgroundColor: '#FFFFFF',
-                    borderTopWidth: 1,
-                    borderTopColor: '#E2E8F0',
-                    height: 64,
-                    paddingBottom: 8,
+                    backgroundColor: '#0B2524', // Rich Deep Emerald-Navy Blue brand background
+                    borderTopWidth: 2,
+                    borderTopColor: '#10B981', // Brand Emerald Green top accent line
+                    height: 66,
+                    paddingBottom: 10,
                     paddingTop: 8,
+                    elevation: 10,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: -3 },
+                    shadowOpacity: 0.15,
+                    shadowRadius: 6,
                 },
-                tabBarActiveTintColor: '#2563EB',
-                tabBarInactiveTintColor: '#64748B',
+                tabBarActiveTintColor: '#10B981', // Vibrant Emerald Green active icon & text
+                tabBarInactiveTintColor: '#94A3B8', // Clean slate inactive tab text
                 tabBarLabelStyle: {
                     fontSize: 11,
-                    fontWeight: '700',
+                    fontWeight: '800',
+                    marginTop: 2,
                 },
             }}
         >

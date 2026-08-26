@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Param, Body, UseGuards } from '@nestjs/common';
 import { StaffService } from './staff.service';
 import { AdminJwtGuard } from '../common/guards/admin-jwt.guard';
 import { AgencyGuard } from '../common/guards/agency.guard';
@@ -12,6 +12,11 @@ export class StaffController {
     @Get()
     findAll(@AgencyId() agencyId: string) {
         return this.staffService.findAll(agencyId);
+    }
+
+    @Post()
+    createStaff(@AgencyId() agencyId: string, @Body() dto: any) {
+        return this.staffService.createStaff(agencyId, dto);
     }
 
     @Put(':id/active')
