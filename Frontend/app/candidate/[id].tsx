@@ -10,9 +10,12 @@ import {
     Modal,
     TextInput,
     Alert,
+    StatusBar,
+    SafeAreaView,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Colors, Spacing, BorderRadius } from '../../constants';
 import { candidateService } from '../../services/candidateService';
 import { savedService } from '../../services/savedService';
 
@@ -39,7 +42,7 @@ export default function CandidateDetailScreen() {
             const res = await candidateService.getCandidateById(id!);
             setCandidate(res.data);
         } catch (error) {
-            Alert.alert('Error', 'Failed to load candidate details');
+            Alert.alert('Error', 'Failed to load candidate profile details');
         } finally {
             setLoading(false);
         }
@@ -51,20 +54,20 @@ export default function CandidateDetailScreen() {
             if (isSaved) {
                 await savedService.unsaveCandidate(id);
                 setIsSaved(false);
-                Alert.alert('Success', 'Removed from saved candidates');
+                Alert.alert('Removed', 'Removed from saved candidates');
             } else {
                 await savedService.saveCandidate(id);
                 setIsSaved(true);
-                Alert.alert('Success', 'Saved to your candidate roster');
+                Alert.alert('Saved', 'Saved candidate to your roster');
             }
         } catch (error: any) {
-            Alert.alert('Error', error.response?.data?.message || 'Action failed');
+            Alert.alert('Error', error.response?.data?.error?.message || 'Action failed');
         }
     };
 
     const handleSendInquiry = async () => {
         if (!inquiryMessage.trim()) {
-            Alert.alert('Required', 'Please enter an inquiry message');
+            Alert.alert('Required', 'Please enter your inquiry message');
             return;
         }
         setSubmittingInquiry(true);
@@ -72,9 +75,9 @@ export default function CandidateDetailScreen() {
             await candidateService.submitInquiry(id!, { message: inquiryMessage });
             setInquiryModalVisible(false);
             setInquiryMessage('');
-            Alert.alert('Inquiry Sent!', 'The managing agency will contact you shortly.');
+            Alert.alert('Inquiry Sent!', 'Your inquiry has been submitted to the recruitment agency!');
         } catch (error: any) {
-            Alert.alert('Error', error.response?.data?.message || 'Failed to submit inquiry');
+            Alert.alert('Error', error.response?.data?.error?.message || 'Failed to send inquiry');
         } finally {
             setSubmittingInquiry(false);
         }
@@ -82,280 +85,575 @@ export default function CandidateDetailScreen() {
 
     if (loading) {
         return (
-            <View style={styles.centered}>
-                <ActivityIndicator size="large" color="#1A365D" />
+            <SafeAreaView style={styles.centeredContainer}>
+                <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
+                <ActivityIndicator size="large" color={Colors.accent} />
                 <Text style={styles.loadingText}>Loading Candidate Profile...</Text>
-            </View>
+            </SafeAreaView>
         );
     }
 
     if (!candidate) {
         return (
-            <View style={styles.centered}>
-                <Text style={styles.errorText}>Candidate Not Found</Text>
-            </View>
+            <SafeAreaView style={styles.centeredContainer}>
+                <Ionicons name="alert-circle-outline" size={48} color={Colors.error} />
+                <Text style={styles.errorText}>Candidate Profile Not Found</Text>
+                <TouchableOpacity style={styles.backHomeBtn} onPress={() => router.back()}>
+                    <Text style={styles.backHomeBtnText}>Go Back</Text>
+                </TouchableOpacity>
+            </SafeAreaView>
         );
     }
 
+    const isMedicalCleared = candidate.medicalStatus === 'cleared';
+    const isVerified = candidate.agency?.isVerified;
+
     return (
-        <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 100 }}>
-            <Stack.Screen
-                options={{
-                    title: `${candidate.firstName} ${candidate.lastName}`,
-                    headerRight: () => (
-                        <TouchableOpacity onPress={toggleSave} style={{ marginRight: 15 }}>
+        <View style={styles.container}>
+            <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
+
+            <Stack.Screen options={{ headerShown: false }} />
+
+            {/* Custom Screen Header Bar with Back Icon */}
+            <SafeAreaView style={styles.topHeaderNav}>
+                <View style={styles.headerNavContent}>
+                    <TouchableOpacity
+                        style={styles.backIconButton}
+                        onPress={() => router.back()}
+                        activeOpacity={0.7}
+                    >
+                        <Ionicons name="arrow-back" size={22} color={Colors.white} />
+                    </TouchableOpacity>
+
+                    <Text style={styles.headerNavTitle} numberOfLines={1}>
+                        {candidate.firstName} {candidate.lastName}
+                    </Text>
+
+                    <TouchableOpacity
+                        style={styles.bookmarkButton}
+                        onPress={toggleSave}
+                        activeOpacity={0.7}
+                    >
+                        <Ionicons
+                            name={isSaved ? 'bookmark' : 'bookmark-outline'}
+                            size={22}
+                            color={isSaved ? Colors.warning : Colors.white}
+                        />
+                    </TouchableOpacity>
+                </View>
+            </SafeAreaView>
+
+            {/* Candidate Info Scroll Content */}
+            <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.scrollContent}
+            >
+                {/* Main Profile Header Card */}
+                <View style={styles.profileHeaderCard}>
+                    {candidate.photoUrl ? (
+                        <Image source={{ uri: candidate.photoUrl }} style={styles.avatarImage} />
+                    ) : (
+                        <View style={styles.avatarCircle}>
+                            <Text style={styles.avatarText}>
+                                {candidate.firstName?.[0] || 'C'}{candidate.lastName?.[0] || ''}
+                            </Text>
+                        </View>
+                    )}
+
+                    <View style={styles.nameRow}>
+                        <Text style={styles.candidateName}>
+                            {candidate.firstName} {candidate.lastName}
+                        </Text>
+                        {isVerified && (
+                            <Ionicons name="checkmark-circle" size={20} color={Colors.accent} />
+                        )}
+                    </View>
+
+                    <Text style={styles.categorySub}>
+                        {candidate.category?.name || 'Domestic Worker'} • {candidate.yearsOfExperience || candidate.experienceYears || '1+'} Years Experience
+                    </Text>
+
+                    {/* Status Badges Row */}
+                    <View style={styles.badgesRow}>
+                        <View
+                            style={[
+                                styles.statusBadge,
+                                isMedicalCleared ? styles.statusCleared : styles.statusPending,
+                            ]}
+                        >
                             <Ionicons
-                                name={isSaved ? 'bookmark' : 'bookmark-outline'}
-                                size={24}
-                                color="#D69E2E"
+                                name="shield-checkmark"
+                                size={13}
+                                color={isMedicalCleared ? Colors.success : Colors.warning}
                             />
-                        </TouchableOpacity>
-                    ),
-                }}
-            />
-
-            {/* Profile Photo / Video Thumbnail Header */}
-            <View style={styles.headerCard}>
-                <Image
-                    source={{
-                        uri: candidate.photoUrl || candidate.videoThumbnail || 'https://via.placeholder.com/300x300.png?text=Candidate+Photo',
-                    }}
-                    style={styles.avatarImage}
-                />
-                <Text style={styles.candidateName}>
-                    {candidate.firstName} {candidate.lastName}
-                </Text>
-                <Text style={styles.categoryText}>{candidate.category?.name || 'Domestic Worker'}</Text>
-
-                <View style={styles.badgeRow}>
-                    <View style={[styles.badge, { backgroundColor: candidate.isAvailable ? '#C6F6D5' : '#FED7D7' }]}>
-                        <Text style={[styles.badgeText, { color: candidate.isAvailable ? '#22543D' : '#742A2A' }]}>
-                            {candidate.isAvailable ? 'Available Now' : 'Reserved'}
-                        </Text>
-                    </View>
-                    <View style={[styles.badge, { backgroundColor: '#EBF8FF' }]}>
-                        <Text style={[styles.badgeText, { color: '#2B6CB0' }]}>
-                            Medical: {candidate.medicalStatus?.toUpperCase() || 'PASSED'}
-                        </Text>
-                    </View>
-                </View>
-            </View>
-
-            {/* Key Information Matrix */}
-            <View style={styles.sectionCard}>
-                <Text style={styles.sectionTitle}>Overview & Demographics</Text>
-                <View style={styles.grid}>
-                    <View style={styles.gridItem}>
-                        <Text style={styles.gridLabel}>Age / Gender</Text>
-                        <Text style={styles.gridValue}>{candidate.age ? `${candidate.age} yrs` : 'N/A'} • {candidate.gender || 'Female'}</Text>
-                    </View>
-                    <View style={styles.gridItem}>
-                        <Text style={styles.gridLabel}>Religion</Text>
-                        <Text style={styles.gridValue}>{candidate.religion || 'Christianity'}</Text>
-                    </View>
-                    <View style={styles.gridItem}>
-                        <Text style={styles.gridLabel}>Experience</Text>
-                        <Text style={styles.gridValue}>{candidate.experienceYears ? `${candidate.experienceYears} Years` : 'Fresh'}</Text>
-                    </View>
-                    <View style={styles.gridItem}>
-                        <Text style={styles.gridLabel}>Location</Text>
-                        <Text style={styles.gridValue}>{candidate.currentCountry || 'Ethiopia'}</Text>
-                    </View>
-                </View>
-            </View>
-
-            {/* Skills & Languages */}
-            <View style={styles.sectionCard}>
-                <Text style={styles.sectionTitle}>Proficiency & Skills</Text>
-                <View style={styles.chipContainer}>
-                    {(candidate.skills || ['House Cleaning', 'Cooking', 'Child Care', 'Elder Care']).map((skill: string, index: number) => (
-                        <View key={index} style={styles.chip}>
-                            <Ionicons name="checkmark-circle" size={16} color="#319795" style={{ marginRight: 4 }} />
-                            <Text style={styles.chipText}>{skill}</Text>
+                            <Text
+                                style={[
+                                    styles.statusBadgeText,
+                                    { color: isMedicalCleared ? Colors.success : Colors.warning },
+                                ]}
+                            >
+                                {isMedicalCleared ? 'Medical Cleared' : 'Medical Pending'}
+                            </Text>
                         </View>
-                    ))}
-                </View>
 
-                <Text style={[styles.sectionTitle, { marginTop: 15 }]}>Languages Spoken</Text>
-                <View style={styles.chipContainer}>
-                    {(candidate.languages || ['Amharic', 'English', 'Arabic (Basic)']).map((lang: string, index: number) => (
-                        <View key={index} style={[styles.chip, { backgroundColor: '#EDF2F7' }]}>
-                            <Text style={[styles.chipText, { color: '#2D3748' }]}>{lang}</Text>
+                        <View style={[styles.statusBadge, styles.statusAvailable]}>
+                            <Ionicons name="checkmark-circle-outline" size={13} color={Colors.accentDark} />
+                            <Text style={[styles.statusBadgeText, { color: Colors.accentDark }]}>
+                                Available for Overseas Hire
+                            </Text>
                         </View>
-                    ))}
+                    </View>
                 </View>
-            </View>
 
-            {/* Managing Agency Banner */}
-            {candidate.agency && (
+                {/* Comprehensive Employer Data Matrix */}
+                <View style={styles.sectionCard}>
+                    <View style={styles.sectionHeaderRow}>
+                        <Ionicons name="person-circle-outline" size={18} color={Colors.accent} />
+                        <Text style={styles.sectionTitle}>Candidate Demographics & Details</Text>
+                    </View>
+
+                    <View style={styles.gridMatrix}>
+                        <View style={styles.gridItem}>
+                            <Text style={styles.gridLabel}>Age / Gender</Text>
+                            <Text style={styles.gridValue}>
+                                {candidate.age ? `${candidate.age} Years` : '24 Years'} • {candidate.gender || 'Female'}
+                            </Text>
+                        </View>
+
+                        <View style={styles.gridItem}>
+                            <Text style={styles.gridLabel}>Religion</Text>
+                            <Text style={styles.gridValue}>{candidate.religion || 'Christianity'}</Text>
+                        </View>
+
+                        <View style={styles.gridItem}>
+                            <Text style={styles.gridLabel}>Current Country</Text>
+                            <Text style={styles.gridValue}>{candidate.currentCountry || 'Ethiopia'}</Text>
+                        </View>
+
+                        <View style={styles.gridItem}>
+                            <Text style={styles.gridLabel}>Target Destination</Text>
+                            <Text style={styles.gridValue}>{candidate.targetCountry || 'Saudi Arabia, UAE, Kuwait'}</Text>
+                        </View>
+
+                        <View style={styles.gridItem}>
+                            <Text style={styles.gridLabel}>Passport Status</Text>
+                            <Text style={[styles.gridValue, { color: Colors.success }]}>
+                                {candidate.passportStatus || 'Passport Ready & Verified'}
+                            </Text>
+                        </View>
+
+                        <View style={styles.gridItem}>
+                            <Text style={styles.gridLabel}>Expected Salary</Text>
+                            <Text style={styles.gridValue}>
+                                {candidate.expectedSalary ? `${candidate.salaryCurrency || 'USD'} ${candidate.expectedSalary}` : 'Negotiable'}
+                            </Text>
+                        </View>
+                    </View>
+                </View>
+
+                {/* Candidate Summary & Background */}
+                {candidate.summary ? (
+                    <View style={styles.sectionCard}>
+                        <View style={styles.sectionHeaderRow}>
+                            <Ionicons name="document-text-outline" size={18} color={Colors.accent} />
+                            <Text style={styles.sectionTitle}>Summary & Professional Bio</Text>
+                        </View>
+                        <Text style={styles.summaryText}>{candidate.summary}</Text>
+                    </View>
+                ) : null}
+
+                {/* Skills & Spoken Languages */}
+                <View style={styles.sectionCard}>
+                    <View style={styles.sectionHeaderRow}>
+                        <Ionicons name="ribbon-outline" size={18} color={Colors.accent} />
+                        <Text style={styles.sectionTitle}>Skills & Competencies</Text>
+                    </View>
+                    <View style={styles.chipsContainer}>
+                        {(candidate.skills || ['House Cleaning', 'Child Care', 'Cooking', 'Elder Care', 'Laundry']).map(
+                            (skill: string, idx: number) => (
+                                <View key={idx} style={styles.skillPill}>
+                                    <Ionicons name="checkmark-circle" size={14} color={Colors.accent} />
+                                    <Text style={styles.skillText}>{skill}</Text>
+                                </View>
+                            )
+                        )}
+                    </View>
+
+                    <View style={[styles.sectionHeaderRow, { marginTop: 16 }]}>
+                        <Ionicons name="language-outline" size={18} color={Colors.accent} />
+                        <Text style={styles.sectionTitle}>Languages Spoken</Text>
+                    </View>
+                    <View style={styles.chipsContainer}>
+                        {(candidate.languages || ['Amharic (Native)', 'English (Basic)', 'Arabic (Conversational)']).map(
+                            (lang: string, idx: number) => (
+                                <View key={idx} style={[styles.skillPill, { backgroundColor: Colors.gray100 }]}>
+                                    <Text style={[styles.skillText, { color: Colors.gray800 }]}>{lang}</Text>
+                                </View>
+                            )
+                        )}
+                    </View>
+                </View>
+
+                {/* Managing Agency Card */}
                 <View style={styles.agencyCard}>
-                    <Ionicons name="business" size={24} color="#1A365D" />
-                    <View style={{ marginLeft: 12, flex: 1 }}>
-                        <Text style={styles.agencyName}>{candidate.agency.name}</Text>
-                        <Text style={styles.agencySub}>Licensed Recruitment Agency</Text>
+                    <View style={styles.agencyIconCircle}>
+                        <Ionicons name="business" size={24} color={Colors.white} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Text style={styles.agencyName}>
+                                {candidate.agency?.name || 'EthioRecruit Verified Agency'}
+                            </Text>
+                            {isVerified && (
+                                <Ionicons name="checkmark-circle" size={16} color={Colors.accent} />
+                            )}
+                        </View>
+                        <Text style={styles.agencySub}>Licensed Foreign Employment Agency</Text>
                     </View>
                 </View>
-            )}
+            </ScrollView>
 
-            {/* Bottom Action Floating Bar */}
-            <View style={styles.actionFooter}>
+            {/* Fixed Bottom Action Bar */}
+            <View style={styles.bottomActionBar}>
                 <TouchableOpacity
-                    style={styles.inquireButton}
-                    onPress={() => setInquiryModalVisible(true)}
+                    style={styles.saveActionBtn}
+                    onPress={toggleSave}
+                    activeOpacity={0.8}
                 >
-                    <Ionicons name="chatbubbles-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
-                    <Text style={styles.inquireButtonText}>Inquire / Request Candidate</Text>
+                    <Ionicons
+                        name={isSaved ? 'bookmark' : 'bookmark-outline'}
+                        size={20}
+                        color={isSaved ? Colors.warning : Colors.gray700}
+                    />
+                </TouchableOpacity>
+
+                {/* High visibility "Inquire with Agency" button */}
+                <TouchableOpacity
+                    style={styles.inquireFullButton}
+                    onPress={() => setInquiryModalVisible(true)}
+                    activeOpacity={0.85}
+                >
+                    <Ionicons name="chatbubble-ellipses" size={20} color={Colors.white} />
+                    <Text style={styles.inquireFullButtonText}>Inquire with Agency</Text>
                 </TouchableOpacity>
             </View>
 
-            {/* Inquiry Modal */}
-            <Modal visible={inquiryModalVisible} transparent animationType="slide">
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Inquire Candidate</Text>
-                        <Text style={styles.modalSubtitle}>
-                            Send an inquiry directly to {candidate.agency?.name || 'the managing agency'}.
-                        </Text>
-
-                        <TextInput
-                            style={styles.textArea}
-                            multiline
-                            numberOfLines={4}
-                            placeholder="State your required start date, working conditions, or specific questions..."
-                            placeholderTextColor="#A0AEC0"
-                            value={inquiryMessage}
-                            onChangeText={setInquiryMessage}
-                        />
-
-                        <View style={styles.modalButtonRow}>
+            {/* Inquiry Submission Modal */}
+            {inquiryModalVisible && (
+                <Modal visible transparent animationType="slide">
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.modalCard}>
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalTitle}>Inquire Candidate</Text>
+                                <TouchableOpacity onPress={() => setInquiryModalVisible(false)}>
+                                    <Ionicons name="close" size={24} color={Colors.gray500} />
+                                </TouchableOpacity>
+                            </View>
+                            <Text style={styles.modalSub}>
+                                Direct inquiry regarding {candidate.firstName} {candidate.lastName} to {candidate.agency?.name || 'the agency'}.
+                            </Text>
+                            <TextInput
+                                style={styles.modalInput}
+                                placeholder="Specify required start date, working conditions, salary budget, or questions..."
+                                placeholderTextColor={Colors.gray400}
+                                multiline
+                                numberOfLines={4}
+                                value={inquiryMessage}
+                                onChangeText={setInquiryMessage}
+                            />
                             <TouchableOpacity
-                                style={styles.cancelModalButton}
-                                onPress={() => setInquiryModalVisible(false)}
-                            >
-                                <Text style={styles.cancelModalButtonText}>Cancel</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={styles.submitModalButton}
+                                style={[styles.modalSubmitBtn, submittingInquiry && { opacity: 0.6 }]}
                                 onPress={handleSendInquiry}
                                 disabled={submittingInquiry}
                             >
-                                {submittingInquiry ? (
-                                    <ActivityIndicator size="small" color="#FFF" />
-                                ) : (
-                                    <Text style={styles.submitModalButtonText}>Send Inquiry</Text>
-                                )}
+                                <Text style={styles.modalSubmitText}>
+                                    {submittingInquiry ? 'Submitting...' : 'Send Inquiry to Agency'}
+                                </Text>
                             </TouchableOpacity>
                         </View>
                     </View>
-                </View>
-            </Modal>
-        </ScrollView>
+                </Modal>
+            )}
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F7FAFC' },
-    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-    loadingText: { marginTop: 12, fontSize: 16, color: '#4A5568' },
-    errorText: { fontSize: 18, color: '#E53E3E', fontWeight: 'bold' },
-    headerCard: {
-        backgroundColor: '#FFFFFF',
-        alignItems: 'center',
-        padding: 24,
-        borderBottomWidth: 1,
-        borderBottomColor: '#E2E8F0',
+    container: { flex: 1, backgroundColor: Colors.background },
+    centeredContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background, padding: Spacing.lg },
+    loadingText: { marginTop: 12, fontSize: 15, color: Colors.gray600, fontWeight: '600' },
+    errorText: { fontSize: 18, fontWeight: '800', color: Colors.error, marginTop: 12 },
+    backHomeBtn: { marginTop: 16, backgroundColor: Colors.primary, paddingHorizontal: 20, paddingVertical: 10, borderRadius: BorderRadius.md },
+    backHomeBtnText: { color: Colors.white, fontWeight: '700' },
+
+    /* Top Nav Header */
+    topHeaderNav: {
+        backgroundColor: Colors.primary,
+        paddingTop: StatusBar.currentHeight || 10,
     },
-    avatarImage: { width: 120, height: 120, borderRadius: 60, marginBottom: 12 },
-    candidateName: { fontSize: 22, fontWeight: 'bold', color: '#1A365D' },
-    categoryText: { fontSize: 14, color: '#718096', marginTop: 4 },
-    badgeRow: { flexDirection: 'row', marginTop: 12 },
-    badge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, marginHorizontal: 4 },
-    badgeText: { fontSize: 12, fontWeight: '600' },
-    sectionCard: {
-        backgroundColor: '#FFFFFF',
-        marginHorizontal: 16,
-        marginTop: 16,
-        padding: 16,
-        borderRadius: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
-    },
-    sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#2D3748', marginBottom: 12 },
-    grid: { flexDirection: 'row', flexWrap: 'wrap' },
-    gridItem: { width: '50%', marginBottom: 12 },
-    gridLabel: { fontSize: 12, color: '#A0AEC0' },
-    gridValue: { fontSize: 14, fontWeight: '600', color: '#2D3748', marginTop: 2 },
-    chipContainer: { flexDirection: 'row', flexWrap: 'wrap' },
-    chip: {
+    headerNavContent: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#E6FFFA',
+        justifyContent: 'space-between',
+        paddingHorizontal: Spacing.md,
+        paddingVertical: 14,
+    },
+    backIconButton: {
+        width: 38,
+        height: 38,
+        borderRadius: 19,
+        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    headerNavTitle: {
+        flex: 1,
+        textAlign: 'center',
+        fontSize: 17,
+        fontWeight: '800',
+        color: Colors.white,
+        marginHorizontal: 12,
+    },
+    bookmarkButton: {
+        width: 38,
+        height: 38,
+        borderRadius: 19,
+        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+
+    scrollContent: {
+        padding: Spacing.lg,
+        gap: Spacing.md,
+        paddingBottom: 100,
+    },
+
+    /* Profile Header */
+    profileHeaderCard: {
+        backgroundColor: Colors.white,
+        borderRadius: BorderRadius.xl,
+        padding: Spacing.lg,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: Colors.gray200,
+        shadowColor: '#000',
+        shadowOpacity: 0.03,
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 6,
+        elevation: 1,
+    },
+    avatarImage: {
+        width: 88,
+        height: 88,
+        borderRadius: 44,
+        marginBottom: 12,
+    },
+    avatarCircle: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: Colors.primary,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    avatarText: {
+        color: Colors.white,
+        fontSize: 28,
+        fontWeight: '900',
+    },
+    nameRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    candidateName: {
+        fontSize: 22,
+        fontWeight: '900',
+        color: Colors.gray900,
+    },
+    categorySub: {
+        fontSize: 13,
+        color: Colors.gray500,
+        marginTop: 3,
+        fontWeight: '600',
+    },
+    badgesRow: {
+        flexDirection: 'row',
+        gap: 8,
+        marginTop: 14,
+    },
+    statusBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: BorderRadius.sm,
+    },
+    statusCleared: { backgroundColor: Colors.success + '15' },
+    statusPending: { backgroundColor: Colors.warning + '15' },
+    statusAvailable: { backgroundColor: Colors.accent + '15' },
+    statusBadgeText: { fontSize: 11, fontWeight: '800' },
+
+    /* Section Cards */
+    sectionCard: {
+        backgroundColor: Colors.white,
+        borderRadius: BorderRadius.xl,
+        padding: Spacing.md,
+        borderWidth: 1,
+        borderColor: Colors.gray200,
+        shadowColor: '#000',
+        shadowOpacity: 0.02,
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 4,
+        elevation: 1,
+    },
+    sectionHeaderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginBottom: 12,
+    },
+    sectionTitle: {
+        fontSize: 15,
+        fontWeight: '800',
+        color: Colors.gray900,
+    },
+    gridMatrix: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        rowGap: 14,
+    },
+    gridItem: {
+        width: '50%',
+    },
+    gridLabel: {
+        fontSize: 11,
+        color: Colors.gray500,
+        fontWeight: '600',
+    },
+    gridValue: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: Colors.gray900,
+        marginTop: 2,
+    },
+    summaryText: {
+        fontSize: 13,
+        color: Colors.gray700,
+        lineHeight: 20,
+    },
+    chipsContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+    },
+    skillPill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+        backgroundColor: Colors.accent + '12',
         paddingHorizontal: 12,
         paddingVertical: 6,
-        borderRadius: 16,
-        marginRight: 8,
-        marginBottom: 8,
+        borderRadius: BorderRadius.md,
     },
-    chipText: { fontSize: 13, color: '#234E52', fontWeight: '500' },
+    skillText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: Colors.gray900,
+    },
+
+    /* Agency Card */
     agencyCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#EDF2F7',
-        marginHorizontal: 16,
-        marginTop: 16,
-        padding: 16,
-        borderRadius: 12,
+        backgroundColor: Colors.primary,
+        padding: Spacing.md,
+        borderRadius: BorderRadius.xl,
+        gap: 12,
     },
-    agencyName: { fontSize: 15, fontWeight: 'bold', color: '#1A365D' },
-    agencySub: { fontSize: 12, color: '#718096' },
-    actionFooter: {
+    agencyIconCircle: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: Colors.accent,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    agencyName: {
+        fontSize: 15,
+        fontWeight: '800',
+        color: Colors.white,
+    },
+    agencySub: {
+        fontSize: 12,
+        color: Colors.gray400,
+        marginTop: 2,
+    },
+
+    /* Bottom Action Bar */
+    bottomActionBar: {
         position: 'absolute',
         bottom: 0,
         left: 0,
         right: 0,
-        backgroundColor: '#FFFFFF',
-        padding: 16,
+        backgroundColor: Colors.white,
+        paddingHorizontal: Spacing.lg,
+        paddingVertical: Spacing.md,
         borderTopWidth: 1,
-        borderTopColor: '#E2E8F0',
+        borderTopColor: Colors.gray200,
+        flexDirection: 'row',
+        gap: 12,
+        shadowColor: '#000',
+        shadowOpacity: 0.08,
+        shadowOffset: { width: 0, height: -3 },
+        shadowRadius: 10,
+        elevation: 10,
     },
-    inquireButton: {
-        backgroundColor: '#1A365D',
+    saveActionBtn: {
+        width: 48,
+        height: 48,
+        borderRadius: BorderRadius.xl,
+        backgroundColor: Colors.gray100,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: Colors.gray200,
+    },
+    inquireFullButton: {
+        flex: 1,
+        backgroundColor: Colors.accent,
+        height: 48,
+        borderRadius: BorderRadius.xl,
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
-        paddingVertical: 14,
-        borderRadius: 10,
+        gap: 8,
     },
-    inquireButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'center',
-        padding: 20,
+    inquireFullButtonText: {
+        color: Colors.white,
+        fontSize: 15,
+        fontWeight: '800',
     },
-    modalContent: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 16,
-        padding: 20,
-    },
-    modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#1A365D' },
-    modalSubtitle: { fontSize: 13, color: '#718096', marginVertical: 8 },
-    textArea: {
-        backgroundColor: '#EDF2F7',
-        borderRadius: 8,
-        padding: 12,
+
+    /* Modal */
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.65)', justifyContent: 'flex-end' },
+    modalCard: { backgroundColor: Colors.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: Spacing.lg, gap: Spacing.md },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    modalTitle: { fontSize: 18, fontWeight: '800', color: Colors.gray900 },
+    modalSub: { fontSize: 13, color: Colors.gray500 },
+    modalInput: {
+        backgroundColor: Colors.gray50,
+        borderRadius: BorderRadius.md,
+        padding: Spacing.md,
+        color: Colors.gray900,
         height: 100,
         textAlignVertical: 'top',
-        color: '#2D3748',
-        marginVertical: 12,
+        borderWidth: 1,
+        borderColor: Colors.gray200,
     },
-    modalButtonRow: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 12 },
-    cancelModalButton: { paddingHorizontal: 16, paddingVertical: 10, marginRight: 8 },
-    cancelModalButtonText: { color: '#718096', fontWeight: '600' },
-    submitModalButton: { backgroundColor: '#1A365D', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
-    submitModalButtonText: { color: '#FFFFFF', fontWeight: 'bold' },
+    modalSubmitBtn: { backgroundColor: Colors.accent, paddingVertical: 14, borderRadius: BorderRadius.md, alignItems: 'center' },
+    modalSubmitText: { color: Colors.white, fontWeight: '700', fontSize: 15 },
 });

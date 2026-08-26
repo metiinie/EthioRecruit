@@ -10,11 +10,11 @@ import {
     Modal,
     Alert,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius } from '../../constants';
 import { useAuthStore } from '../../stores/authStore';
 import { HeaderBar } from '../../components/HeaderBar';
-import { CandidateDetailModal } from '../../components/CandidateDetailModal';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { candidateService } from '../../services/candidateService';
 import { vacancyService } from '../../services/vacancyService';
@@ -30,6 +30,7 @@ const CATEGORIES = [
 ];
 
 export default function BrowseScreen() {
+    const router = useRouter();
     const mode = useAuthStore((s) => s.mode);
     const isJobSeeker = mode === 'JOB_SEEKER';
     const queryClient = useQueryClient();
@@ -37,7 +38,6 @@ export default function BrowseScreen() {
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [medicalFilter, setMedicalFilter] = useState<'all' | 'cleared'>('all');
     const [searchQuery, setSearchQuery] = useState('');
-    const [viewDetailCandidate, setViewDetailCandidate] = useState<any>(null);
     const [selectedCandidate, setSelectedCandidate] = useState<any>(null);
     const [inquiryMessage, setInquiryMessage] = useState('');
     const [selectedVacancy, setSelectedVacancy] = useState<any>(null);
@@ -266,7 +266,7 @@ export default function BrowseScreen() {
                             <TouchableOpacity
                                 key={cand.id}
                                 style={styles.card}
-                                onPress={() => setViewDetailCandidate(cand)}
+                                onPress={() => router.push(`/candidate/${cand.id}` as any)}
                                 activeOpacity={0.88}
                             >
                                 <View style={styles.candidateHeader}>
@@ -335,14 +335,6 @@ export default function BrowseScreen() {
                     )}
                 </ScrollView>
             )}
-
-            {/* Candidate Detail Modal */}
-            <CandidateDetailModal
-                candidate={viewDetailCandidate}
-                visible={!!viewDetailCandidate}
-                onClose={() => setViewDetailCandidate(null)}
-                onInquire={(cand) => setSelectedCandidate(cand)}
-            />
 
             {/* Inquiry Modal */}
             {selectedCandidate && (
