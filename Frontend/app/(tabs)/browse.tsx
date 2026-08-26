@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import {
     View,
     Text,
@@ -13,12 +13,13 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius } from '../../constants';
 import { useAuthStore } from '../../stores/authStore';
+import { HeaderBar } from '../../components/HeaderBar';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { candidateService } from '../../services/candidateService';
 import { vacancyService } from '../../services/vacancyService';
 
 const CATEGORIES = [
-    { id: 'all', name: 'All' },
+    { id: 'all', name: 'All Categories' },
     { id: 'housemaid', name: 'Housemaid' },
     { id: 'nanny', name: 'Nanny' },
     { id: 'driver', name: 'Driver' },
@@ -33,6 +34,7 @@ export default function BrowseScreen() {
     const queryClient = useQueryClient();
 
     const [selectedCategory, setSelectedCategory] = useState('all');
+    const [medicalFilter, setMedicalFilter] = useState<'all' | 'cleared'>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCandidate, setSelectedCandidate] = useState<any>(null);
     const [inquiryMessage, setInquiryMessage] = useState('');
@@ -66,12 +68,13 @@ export default function BrowseScreen() {
         mutationFn: (data: { candidateId: string; message: string }) =>
             candidateService.submitInquiry(data.candidateId, { message: data.message }),
         onSuccess: () => {
-            Alert.alert('Success', 'Your inquiry has been submitted to the agency!');
+            Alert.alert('Inquiry Sent', 'Your inquiry has been submitted to the recruitment agency!');
             setSelectedCandidate(null);
             setInquiryMessage('');
+            queryClient.invalidateQueries({ queryKey: ['activity', 'inquiries'] });
         },
         onError: (err: any) => {
-            Alert.alert('Error', err.response?.data?.error?.message || 'Failed to send inquiry');
+            Alert.alert('Submission Error', err.response?.data?.error?.message || 'Failed to send inquiry');
         },
     });
 
@@ -83,28 +86,36 @@ export default function BrowseScreen() {
             Alert.alert('Application Submitted', 'Your application has been received!');
             setSelectedVacancy(null);
             setCoverLetter('');
-            queryClient.invalidateQueries({ queryKey: ['activity'] });
+            queryClient.invalidateQueries({ queryKey: ['activity', 'applications'] });
         },
         onError: (err: any) => {
-            Alert.alert('Error', err.response?.data?.error?.message || 'Failed to submit application');
+            Alert.alert('Submission Error', err.response?.data?.error?.message || 'Failed to submit application');
         },
     });
 
     const isLoading = isJobSeeker ? vacanciesQuery.isLoading : candidatesQuery.isLoading;
 
+    let rawCandidates = candidatesQuery.data?.data || [];
+    if (medicalFilter === 'cleared') {
+        rawCandidates = rawCandidates.filter((c: any) => c.medicalStatus === 'cleared');
+    }
+
     return (
         <View style={styles.container}>
-            {/* Header */}
-            <View style={styles.header}>
-                <Text style={styles.title}>
-                    {isJobSeeker ? 'Overseas Vacancies' : 'Verified Candidates'}
-                </Text>
-            </View>
+            {/* HeaderBar */}
+            <HeaderBar
+                title={isJobSeeker ? 'Overseas Vacancies' : 'Verified Candidates'}
+                subtitle={
+                    isJobSeeker
+                        ? 'Explore & apply to abroad job openings'
+                        : 'Browse certified domestic & skilled workers'
+                }
+            />
 
-            {/* Search Input */}
+            {/* Search Bar */}
             <View style={styles.searchContainer}>
                 <View style={styles.searchBar}>
-                    <Ionicons name="search" size={20} color={Colors.gray400} />
+                    <Ionicons name="search" size={18} color={Colors.accent} />
                     <TextInput
                         style={styles.searchInput}
                         placeholder={isJobSeeker ? 'Search title, country...' : 'Search skills, location...'}
@@ -121,32 +132,68 @@ export default function BrowseScreen() {
             </View>
 
             {/* Category Pills */}
-            <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.categoryScroll}
-                contentContainerStyle={styles.categoryContent}
-            >
-                {CATEGORIES.map((cat) => (
+            <View style={{ height: 44, marginBottom: 8 }}>
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.categoryContent}
+                >
+                    {CATEGORIES.map((cat) => {
+                        const isActive = selectedCategory === cat.id;
+                        return (
+                            <TouchableOpacity
+                                key={cat.id}
+                                style={[styles.categoryPill, isActive && styles.categoryPillActive]}
+                                onPress={() => setSelectedCategory(cat.id)}
+                            >
+                                <Text style={[styles.categoryText, isActive && styles.categoryTextActive]}>
+                                    {cat.name}
+                                </Text>
+                            </TouchableOpacity>
+                        );
+                    })}
+                </ScrollView>
+            </View>
+
+            {/* Extra Filter Row for Employers: Medical Cleared Toggle */}
+            {!isJobSeeker && (
+                <View style={styles.filterRow}>
                     <TouchableOpacity
-                        key={cat.id}
                         style={[
-                            styles.categoryPill,
-                            selectedCategory === cat.id && styles.categoryPillActive,
+                            styles.filterChip,
+                            medicalFilter === 'all' && styles.filterChipActive,
                         ]}
-                        onPress={() => setSelectedCategory(cat.id)}
+                        onPress={() => setMedicalFilter('all')}
                     >
                         <Text
                             style={[
-                                styles.categoryText,
-                                selectedCategory === cat.id && styles.categoryTextActive,
+                                styles.filterChipText,
+                                medicalFilter === 'all' && styles.filterChipTextActive,
                             ]}
                         >
-                            {cat.name}
+                            All Candidates
                         </Text>
                     </TouchableOpacity>
-                ))}
-            </ScrollView>
+
+                    <TouchableOpacity
+                        style={[
+                            styles.filterChip,
+                            medicalFilter === 'cleared' && styles.filterChipActive,
+                        ]}
+                        onPress={() => setMedicalFilter('cleared')}
+                    >
+                        <Ionicons name="shield-checkmark" size={14} color={medicalFilter === 'cleared' ? Colors.white : Colors.success} />
+                        <Text
+                            style={[
+                                styles.filterChipText,
+                                medicalFilter === 'cleared' && styles.filterChipTextActive,
+                            ]}
+                        >
+                            Medical Cleared Only
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+            )}
 
             {/* Main List Area */}
             {isLoading ? (
@@ -155,11 +202,11 @@ export default function BrowseScreen() {
                 </View>
             ) : isJobSeeker ? (
                 /* Vacancies List */
-                <ScrollView contentContainerStyle={styles.listContent}>
+                <ScrollView contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
                     {vacanciesQuery.data?.data?.length === 0 ? (
                         <View style={styles.emptyBox}>
                             <Ionicons name="briefcase-outline" size={48} color={Colors.gray300} />
-                            <Text style={styles.emptyText}>No vacancies found</Text>
+                            <Text style={styles.emptyText}>No vacancies found matching your search</Text>
                         </View>
                     ) : (
                         vacanciesQuery.data?.data?.map((vac: any) => (
@@ -206,18 +253,18 @@ export default function BrowseScreen() {
                 </ScrollView>
             ) : (
                 /* Candidates List */
-                <ScrollView contentContainerStyle={styles.listContent}>
-                    {candidatesQuery.data?.data?.length === 0 ? (
+                <ScrollView contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
+                    {rawCandidates.length === 0 ? (
                         <View style={styles.emptyBox}>
                             <Ionicons name="people-outline" size={48} color={Colors.gray300} />
-                            <Text style={styles.emptyText}>No candidates found</Text>
+                            <Text style={styles.emptyText}>No candidates found matching your filters</Text>
                         </View>
                     ) : (
-                        candidatesQuery.data?.data?.map((cand: any) => (
+                        rawCandidates.map((cand: any) => (
                             <View key={cand.id} style={styles.card}>
                                 <View style={styles.candidateHeader}>
                                     <View style={styles.avatarPlaceholder}>
-                                        <Text style={styles.avatarInitial}>{cand.firstName?.[0]}</Text>
+                                        <Text style={styles.avatarInitial}>{cand.firstName?.[0] || 'C'}</Text>
                                     </View>
                                     <View style={{ flex: 1, marginLeft: 12 }}>
                                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -246,21 +293,29 @@ export default function BrowseScreen() {
                                                 cand.medicalStatus === 'cleared' && { color: Colors.success },
                                             ]}
                                         >
-                                            {cand.medicalStatus === 'cleared' ? 'Medical Cleared' : 'Medical Pending'}
+                                            {cand.medicalStatus === 'cleared' ? 'Medical Cleared' : 'Pending'}
                                         </Text>
                                     </View>
                                 </View>
 
-                                {cand.summary && <Text style={styles.summaryText}>{cand.summary}</Text>}
+                                {cand.summary ? <Text style={styles.summaryText}>{cand.summary}</Text> : null}
 
-                                <TouchableOpacity
-                                    style={styles.actionBtn}
-                                    onPress={() => setSelectedCandidate(cand)}
-                                    activeOpacity={0.8}
-                                >
-                                    <Ionicons name="chatbubble" size={16} color={Colors.white} />
-                                    <Text style={styles.actionBtnText}>Inquire with Agency</Text>
-                                </TouchableOpacity>
+                                <View style={styles.cardFooterRow}>
+                                    <View style={styles.agencyInfo}>
+                                        <Ionicons name="business-outline" size={14} color={Colors.gray500} />
+                                        <Text style={styles.agencyInfoText}>
+                                            {cand.agency?.name || 'EthioRecruit Agency'}
+                                        </Text>
+                                    </View>
+                                    <TouchableOpacity
+                                        style={styles.actionBtn}
+                                        onPress={() => setSelectedCandidate(cand)}
+                                        activeOpacity={0.8}
+                                    >
+                                        <Ionicons name="chatbubble" size={15} color={Colors.white} />
+                                        <Text style={styles.actionBtnText}>Inquire with Agency</Text>
+                                    </TouchableOpacity>
+                                </View>
                             </View>
                         ))
                     )}
@@ -279,11 +334,11 @@ export default function BrowseScreen() {
                                 </TouchableOpacity>
                             </View>
                             <Text style={styles.modalSub}>
-                                Sending message regarding {selectedCandidate.firstName} {selectedCandidate.lastName} to {selectedCandidate.agency?.name || 'the agency'}.
+                                Send direct inquiry regarding {selectedCandidate.firstName} {selectedCandidate.lastName} to {selectedCandidate.agency?.name || 'the agency'}.
                             </Text>
                             <TextInput
                                 style={styles.modalInput}
-                                placeholder="Specify requirements, start date, or questions..."
+                                placeholder="Specify requirements, start date, salary budget, or questions..."
                                 placeholderTextColor={Colors.gray400}
                                 multiline
                                 numberOfLines={4}
@@ -301,7 +356,7 @@ export default function BrowseScreen() {
                                 disabled={inquiryMutation.isPending}
                             >
                                 <Text style={styles.modalSubmitText}>
-                                    {inquiryMutation.isPending ? 'Submitting...' : 'Send Inquiry'}
+                                    {inquiryMutation.isPending ? 'Submitting...' : 'Send Inquiry to Agency'}
                                 </Text>
                             </TouchableOpacity>
                         </View>
@@ -356,42 +411,75 @@ export default function BrowseScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: Colors.background },
-    header: { paddingTop: 60, paddingHorizontal: Spacing.lg, paddingBottom: Spacing.sm },
-    title: { fontSize: 24, fontWeight: '800', color: Colors.gray900 },
-    searchContainer: { paddingHorizontal: Spacing.lg, marginBottom: Spacing.sm },
+    searchContainer: { paddingHorizontal: Spacing.lg, marginTop: Spacing.md, marginBottom: Spacing.xs },
     searchBar: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: Colors.white,
-        borderRadius: BorderRadius.md,
+        borderRadius: BorderRadius.xl,
         paddingHorizontal: Spacing.md,
         height: 48,
         gap: 8,
         borderWidth: 1,
         borderColor: Colors.gray200,
+        shadowColor: '#000',
+        shadowOpacity: 0.02,
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 6,
+        elevation: 1,
     },
-    searchInput: { flex: 1, color: Colors.gray900, fontSize: 15 },
-    categoryScroll: { maxHeight: 44, marginBottom: Spacing.sm },
+    searchInput: { flex: 1, color: Colors.gray900, fontSize: 14, fontWeight: '500' },
     categoryContent: { paddingHorizontal: Spacing.lg, gap: 8, alignItems: 'center' },
     categoryPill: {
-        paddingHorizontal: 16,
-        paddingVertical: 8,
+        paddingHorizontal: 14,
+        paddingVertical: 7,
         borderRadius: BorderRadius.full,
         backgroundColor: Colors.white,
         borderWidth: 1,
         borderColor: Colors.gray200,
     },
     categoryPillActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-    categoryText: { fontSize: 13, fontWeight: '600', color: Colors.gray600 },
-    categoryTextActive: { color: Colors.white },
+    categoryText: { fontSize: 12, fontWeight: '600', color: Colors.gray600 },
+    categoryTextActive: { color: Colors.white, fontWeight: '700' },
+    filterRow: {
+        flexDirection: 'row',
+        paddingHorizontal: Spacing.lg,
+        gap: 8,
+        marginBottom: Spacing.xs,
+    },
+    filterChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: BorderRadius.md,
+        backgroundColor: Colors.gray100,
+        borderWidth: 1,
+        borderColor: Colors.gray200,
+    },
+    filterChipActive: {
+        backgroundColor: Colors.accent,
+        borderColor: Colors.accent,
+    },
+    filterChipText: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: Colors.gray700,
+    },
+    filterChipTextActive: {
+        color: Colors.white,
+    },
     loadingArea: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     listContent: { padding: Spacing.lg, gap: Spacing.md, paddingBottom: 40 },
     emptyBox: { alignItems: 'center', paddingTop: 60, gap: 12 },
-    emptyText: { color: Colors.gray400, fontSize: 16 },
+    emptyText: { color: Colors.gray400, fontSize: 15 },
     card: {
         backgroundColor: Colors.white,
-        borderRadius: BorderRadius.lg,
+        borderRadius: BorderRadius.xl,
         padding: Spacing.md,
+        borderWidth: 1,
+        borderColor: Colors.gray200,
         shadowColor: '#000',
         shadowOpacity: 0.04,
         shadowOffset: { width: 0, height: 2 },
@@ -399,8 +487,8 @@ const styles = StyleSheet.create({
         elevation: 1,
     },
     cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-    cardTitle: { fontSize: 17, fontWeight: '700', color: Colors.gray900 },
-    agencyName: { fontSize: 13, color: Colors.gray500, marginTop: 2 },
+    cardTitle: { fontSize: 16, fontWeight: '800', color: Colors.gray900 },
+    agencyName: { fontSize: 12, color: Colors.gray500, marginTop: 2 },
     badgeTeal: {
         backgroundColor: Colors.accent + '15',
         paddingHorizontal: 10,
@@ -413,34 +501,53 @@ const styles = StyleSheet.create({
     metaText: { fontSize: 12, color: Colors.gray600, fontWeight: '500' },
     actionBtn: {
         backgroundColor: Colors.accent,
-        paddingVertical: 12,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
         borderRadius: BorderRadius.md,
         alignItems: 'center',
         flexDirection: 'row',
         justifyContent: 'center',
-        gap: 8,
-        marginTop: 4,
+        gap: 6,
     },
-    actionBtnText: { color: Colors.white, fontWeight: '700', fontSize: 14 },
+    actionBtnText: { color: Colors.white, fontWeight: '700', fontSize: 13 },
     candidateHeader: { flexDirection: 'row', alignItems: 'center' },
     avatarPlaceholder: {
         width: 44,
         height: 44,
         borderRadius: 22,
-        backgroundColor: Colors.primaryLight,
+        backgroundColor: Colors.primary,
         justifyContent: 'center',
         alignItems: 'center',
     },
-    avatarInitial: { color: Colors.white, fontWeight: '700', fontSize: 18 },
+    avatarInitial: { color: Colors.white, fontWeight: '800', fontSize: 18 },
     statusTag: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: Colors.gray100 },
     statusCleared: { backgroundColor: Colors.success + '15' },
     statusPending: { backgroundColor: Colors.warning + '15' },
-    statusTagText: { fontSize: 10, fontWeight: '700', color: Colors.gray600 },
+    statusTagText: { fontSize: 10, fontWeight: '800', color: Colors.gray600 },
     summaryText: { fontSize: 13, color: Colors.gray600, marginTop: 10, marginBottom: 10, lineHeight: 18 },
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+    cardFooterRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 10,
+        paddingTop: 10,
+        borderTopWidth: 1,
+        borderTopColor: Colors.gray100,
+    },
+    agencyInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+    },
+    agencyInfoText: {
+        fontSize: 12,
+        color: Colors.gray600,
+        fontWeight: '500',
+    },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.65)', justifyContent: 'flex-end' },
     modalCard: { backgroundColor: Colors.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: Spacing.lg, gap: Spacing.md },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    modalTitle: { fontSize: 18, fontWeight: '700', color: Colors.gray900 },
+    modalTitle: { fontSize: 18, fontWeight: '800', color: Colors.gray900 },
     modalSub: { fontSize: 13, color: Colors.gray500 },
     modalInput: {
         backgroundColor: Colors.gray50,

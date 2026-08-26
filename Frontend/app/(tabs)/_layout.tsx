@@ -12,18 +12,24 @@ export default function TabLayout() {
             screenOptions={{
                 headerShown: false,
                 tabBarStyle: {
-                    backgroundColor: Colors.white,
-                    borderTopWidth: 1,
-                    borderTopColor: Colors.gray200,
-                    height: 64,
-                    paddingBottom: 8,
+                    backgroundColor: '#0F172A', // Deep Slate Navy brand background
+                    borderTopWidth: 2,
+                    borderTopColor: '#14B8A6', // Brand Teal top accent line
+                    height: 66,
+                    paddingBottom: 10,
                     paddingTop: 8,
+                    elevation: 10,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: -3 },
+                    shadowOpacity: 0.15,
+                    shadowRadius: 6,
                 },
-                tabBarActiveTintColor: Colors.accent,
-                tabBarInactiveTintColor: Colors.gray400,
+                tabBarActiveTintColor: '#14B8A6', // Vibrant Teal active icon & text
+                tabBarInactiveTintColor: '#94A3B8', // Clean slate inactive tab text
                 tabBarLabelStyle: {
                     fontSize: 11,
-                    fontWeight: '600',
+                    fontWeight: '800',
+                    marginTop: 2,
                 },
             }}
         >
@@ -32,7 +38,7 @@ export default function TabLayout() {
                 options={{
                     title: 'Home',
                     tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="home" size={size} color={color} />
+                        <Ionicons name="grid-outline" size={size} color={color} />
                     ),
                 }}
             />
@@ -42,7 +48,7 @@ export default function TabLayout() {
                     title: isJobSeeker ? 'Jobs' : 'Candidates',
                     tabBarIcon: ({ color, size }) => (
                         <Ionicons
-                            name={isJobSeeker ? 'briefcase' : 'people'}
+                            name={isJobSeeker ? 'briefcase-outline' : 'people-outline'}
                             size={size}
                             color={color}
                         />
@@ -54,7 +60,7 @@ export default function TabLayout() {
                 options={{
                     title: isJobSeeker ? 'Applications' : 'Inquiries',
                     tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="documents" size={size} color={color} />
+                        <Ionicons name="chatbubbles-outline" size={size} color={color} />
                     ),
                 }}
             />
@@ -63,7 +69,7 @@ export default function TabLayout() {
                 options={{
                     title: 'Profile',
                     tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="person" size={size} color={color} />
+                        <Ionicons name="person-circle-outline" size={size} color={color} />
                     ),
                 }}
             />
