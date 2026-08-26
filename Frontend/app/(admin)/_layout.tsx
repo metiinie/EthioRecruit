@@ -8,17 +8,18 @@ export default function AdminLayout() {
             screenOptions={{
                 headerShown: false,
                 tabBarStyle: {
-                    backgroundColor: Colors.primary,
-                    borderTopWidth: 0,
+                    backgroundColor: '#FFFFFF',
+                    borderTopWidth: 1,
+                    borderTopColor: '#E2E8F0',
                     height: 64,
                     paddingBottom: 8,
                     paddingTop: 8,
                 },
-                tabBarActiveTintColor: Colors.accent,
-                tabBarInactiveTintColor: Colors.gray500,
+                tabBarActiveTintColor: '#2563EB',
+                tabBarInactiveTintColor: '#64748B',
                 tabBarLabelStyle: {
                     fontSize: 11,
-                    fontWeight: '600',
+                    fontWeight: '700',
                 },
             }}
         >
@@ -27,7 +28,7 @@ export default function AdminLayout() {
                 options={{
                     title: 'Dashboard',
                     tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="grid" size={size} color={color} />
+                        <Ionicons name="grid-outline" size={size} color={color} />
                     ),
                 }}
             />
@@ -36,7 +37,7 @@ export default function AdminLayout() {
                 options={{
                     title: 'Candidates',
                     tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="people" size={size} color={color} />
+                        <Ionicons name="people-outline" size={size} color={color} />
                     ),
                 }}
             />
@@ -45,7 +46,7 @@ export default function AdminLayout() {
                 options={{
                     title: 'Vacancies',
                     tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="briefcase" size={size} color={color} />
+                        <Ionicons name="briefcase-outline" size={size} color={color} />
                     ),
                 }}
             />
@@ -54,7 +55,7 @@ export default function AdminLayout() {
                 options={{
                     title: 'Pipeline',
                     tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="git-branch" size={size} color={color} />
+                        <Ionicons name="git-branch-outline" size={size} color={color} />
                     ),
                 }}
             />
@@ -63,16 +64,16 @@ export default function AdminLayout() {
                 options={{
                     title: 'Staff',
                     tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="people-circle" size={size} color={color} />
+                        <Ionicons name="people-circle-outline" size={size} color={color} />
                     ),
                 }}
             />
             <Tabs.Screen
                 name="settings"
                 options={{
-                    title: 'Settings',
+                    title: 'Credentials',
                     tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="settings" size={size} color={color} />
+                        <Ionicons name="shield-checkmark-outline" size={size} color={color} />
                     ),
                 }}
             />
