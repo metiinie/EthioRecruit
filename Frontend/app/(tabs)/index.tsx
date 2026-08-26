@@ -15,7 +15,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius } from '../../constants';
 import { useAuthStore } from '../../stores/authStore';
 import { HeaderBar } from '../../components/HeaderBar';
-import { CandidateDetailModal } from '../../components/CandidateDetailModal';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { candidateService } from '../../services/candidateService';
 import { vacancyService } from '../../services/vacancyService';
@@ -37,7 +36,6 @@ export default function HomeScreen() {
     const queryClient = useQueryClient();
 
     const [selectedCategory, setSelectedCategory] = useState('all');
-    const [viewDetailCandidate, setViewDetailCandidate] = useState<any>(null);
     const [selectedCandidate, setSelectedCandidate] = useState<any>(null);
     const [inquiryMessage, setInquiryMessage] = useState('');
 
@@ -187,7 +185,7 @@ export default function HomeScreen() {
                             <TouchableOpacity
                                 key={cand.id}
                                 style={styles.candidateCard}
-                                onPress={() => setViewDetailCandidate(cand)}
+                                onPress={() => router.push(`/candidate/${cand.id}` as any)}
                                 activeOpacity={0.88}
                             >
                                 <View style={styles.candidateTopRow}>
@@ -268,14 +266,6 @@ export default function HomeScreen() {
                     ))
                 )}
             </ScrollView>
-
-            {/* Candidate Detail Modal */}
-            <CandidateDetailModal
-                candidate={viewDetailCandidate}
-                visible={!!viewDetailCandidate}
-                onClose={() => setViewDetailCandidate(null)}
-                onInquire={(cand) => setSelectedCandidate(cand)}
-            />
 
             {/* Inquiry Modal */}
             {selectedCandidate && (

@@ -26,6 +26,7 @@ export default function CandidateDetailScreen() {
     const [candidate, setCandidate] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [isSaved, setIsSaved] = useState(false);
+    const [togglingSave, setTogglingSave] = useState(false);
     const [inquiryModalVisible, setInquiryModalVisible] = useState(false);
     const [inquiryMessage, setInquiryMessage] = useState('');
     const [submittingInquiry, setSubmittingInquiry] = useState(false);
@@ -33,6 +34,7 @@ export default function CandidateDetailScreen() {
     useEffect(() => {
         if (id) {
             loadCandidate();
+            checkIsSaved();
         }
     }, [id]);
 
@@ -48,20 +50,44 @@ export default function CandidateDetailScreen() {
         }
     };
 
+    const checkIsSaved = async () => {
+        try {
+            const res = await savedService.getSavedCandidates();
+            const list = res.data || [];
+            const found = list.some((item: any) => item.candidateId === id || item.candidate?.id === id);
+            setIsSaved(found);
+        } catch (error) {
+            // Ignore error on initial saved status check
+        }
+    };
+
     const toggleSave = async () => {
-        if (!id) return;
+        if (!id || togglingSave) return;
+        setTogglingSave(true);
         try {
             if (isSaved) {
                 await savedService.unsaveCandidate(id);
                 setIsSaved(false);
-                Alert.alert('Removed', 'Removed from saved candidates');
+                Alert.alert('Removed', 'Candidate removed from your saved list');
             } else {
-                await savedService.saveCandidate(id);
-                setIsSaved(true);
-                Alert.alert('Saved', 'Saved candidate to your roster');
+                try {
+                    await savedService.saveCandidate(id);
+                    setIsSaved(true);
+                    Alert.alert('Saved', 'Candidate saved to your roster');
+                } catch (err: any) {
+                    const msg = err.response?.data?.error?.message || err.response?.data?.message || '';
+                    if (msg.includes('already saved') || err.response?.status === 409) {
+                        setIsSaved(true);
+                        Alert.alert('Saved', 'Candidate is already in your saved list');
+                    } else {
+                        throw err;
+                    }
+                }
             }
         } catch (error: any) {
-            Alert.alert('Error', error.response?.data?.error?.message || 'Action failed');
+            Alert.alert('Error', error.response?.data?.error?.message || 'Failed to update saved status');
+        } finally {
+            setTogglingSave(false);
         }
     };
 
@@ -132,13 +158,18 @@ export default function CandidateDetailScreen() {
                     <TouchableOpacity
                         style={styles.bookmarkButton}
                         onPress={toggleSave}
+                        disabled={togglingSave}
                         activeOpacity={0.7}
                     >
-                        <Ionicons
-                            name={isSaved ? 'bookmark' : 'bookmark-outline'}
-                            size={22}
-                            color={isSaved ? Colors.warning : Colors.white}
-                        />
+                        {togglingSave ? (
+                            <ActivityIndicator size="small" color={Colors.white} />
+                        ) : (
+                            <Ionicons
+                                name={isSaved ? 'bookmark' : 'bookmark-outline'}
+                                size={22}
+                                color={isSaved ? Colors.warning : Colors.white}
+                            />
+                        )}
                     </TouchableOpacity>
                 </View>
             </SafeAreaView>
@@ -318,13 +349,18 @@ export default function CandidateDetailScreen() {
                 <TouchableOpacity
                     style={styles.saveActionBtn}
                     onPress={toggleSave}
+                    disabled={togglingSave}
                     activeOpacity={0.8}
                 >
-                    <Ionicons
-                        name={isSaved ? 'bookmark' : 'bookmark-outline'}
-                        size={20}
-                        color={isSaved ? Colors.warning : Colors.gray700}
-                    />
+                    {togglingSave ? (
+                        <ActivityIndicator size="small" color={Colors.accent} />
+                    ) : (
+                        <Ionicons
+                            name={isSaved ? 'bookmark' : 'bookmark-outline'}
+                            size={20}
+                            color={isSaved ? Colors.warning : Colors.gray700}
+                        />
+                    )}
                 </TouchableOpacity>
 
                 {/* High visibility "Inquire with Agency" button */}
@@ -394,7 +430,7 @@ const styles = StyleSheet.create({
     headerNavContent: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justify.content: 'space-between',
         paddingHorizontal: Spacing.md,
         paddingVertical: 14,
     },
@@ -628,7 +664,7 @@ const styles = StyleSheet.create({
         height: 48,
         borderRadius: BorderRadius.xl,
         flexDirection: 'row',
-        justifyContent: 'center',
+        justify.content: 'center',
         alignItems: 'center',
         gap: 8,
     },
