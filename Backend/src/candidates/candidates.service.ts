@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCandidateDto, UpdateCandidateDto, CandidateFiltersDto } from './dto/candidate.dto';
 
@@ -439,6 +439,34 @@ export class CandidatesService {
             data: {
                 candidate,
                 html,
+            },
+        };
+    }
+
+    async bulkCreateAdmin(agencyId: string, candidatesList: CreateCandidateDto[]) {
+        if (!Array.isArray(candidatesList) || candidatesList.length === 0) {
+            throw new BadRequestException('Bulk candidate list must be a non-empty array');
+        }
+
+        const createdCandidates = [];
+        const errors = [];
+
+        for (let i = 0; i < candidatesList.length; i++) {
+            try {
+                const res = await this.createAdmin(agencyId, candidatesList[i]);
+                createdCandidates.push(res.data);
+            } catch (err: any) {
+                errors.push({ index: i, candidate: candidatesList[i], error: err.message });
+            }
+        }
+
+        return {
+            data: {
+                totalProcessed: candidatesList.length,
+                successCount: createdCandidates.length,
+                failureCount: errors.length,
+                createdCandidates,
+                errors,
             },
         };
     }

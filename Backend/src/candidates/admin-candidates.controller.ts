@@ -36,6 +36,15 @@ export class AdminCandidatesController {
         return this.candidatesService.createAdmin(agencyId, dto);
     }
 
+    @Post('bulk')
+    bulkCreate(
+        @AgencyId() agencyId: string,
+        @Body() body: { candidates: CreateCandidateDto[] },
+    ) {
+        const list = Array.isArray(body) ? body : body.candidates;
+        return this.candidatesService.bulkCreateAdmin(agencyId, list);
+    }
+
     @Put(':id')
     update(
         @Param('id') id: string,
