@@ -3,22 +3,25 @@ import {
     View,
     Text,
     ScrollView,
-    StyleSheet,
     TouchableOpacity,
     TextInput,
+    StyleSheet,
     ActivityIndicator,
+    Modal,
+    Alert,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius } from '../../constants';
 import { useAuthStore } from '../../stores/authStore';
 import { HeaderBar } from '../../components/HeaderBar';
-import { useQuery } from '@tanstack/react-query';
+import { CandidateDetailModal } from '../../components/CandidateDetailModal';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { candidateService } from '../../services/candidateService';
 import { vacancyService } from '../../services/vacancyService';
-import { useRouter } from 'expo-router';
 
 const CATEGORIES = [
-    { id: 'all', name: 'All' },
+    { id: 'all', name: 'All Categories' },
     { id: 'housemaid', name: 'Housemaid' },
     { id: 'nanny', name: 'Nanny' },
     { id: 'driver', name: 'Driver' },
@@ -29,16 +32,18 @@ const CATEGORIES = [
 
 export default function HomeScreen() {
     const router = useRouter();
-    const user = useAuthStore((s) => s.user);
     const mode = useAuthStore((s) => s.mode);
     const isJobSeeker = mode === 'JOB_SEEKER';
+    const queryClient = useQueryClient();
 
     const [selectedCategory, setSelectedCategory] = useState('all');
-    const [searchQuery, setSearchQuery] = useState('');
+    const [viewDetailCandidate, setViewDetailCandidate] = useState<any>(null);
+    const [selectedCandidate, setSelectedCandidate] = useState<any>(null);
+    const [inquiryMessage, setInquiryMessage] = useState('');
 
-    // Fetch Candidates preview for Employer
+    // Fetch Candidates (Employer mode)
     const candidatesQuery = useQuery({
-        queryKey: ['candidates', 'home', selectedCategory],
+        queryKey: ['home-candidates', selectedCategory],
         queryFn: () =>
             candidateService.getCandidates({
                 categoryId: selectedCategory === 'all' ? undefined : selectedCategory,
@@ -47,9 +52,9 @@ export default function HomeScreen() {
         enabled: !isJobSeeker,
     });
 
-    // Fetch Vacancies preview for Job Seeker
+    // Fetch Vacancies (Job Seeker mode)
     const vacanciesQuery = useQuery({
-        queryKey: ['vacancies', 'home', selectedCategory],
+        queryKey: ['home-vacancies', selectedCategory],
         queryFn: () =>
             vacancyService.getVacancies({
                 categoryId: selectedCategory === 'all' ? undefined : selectedCategory,
@@ -58,71 +63,88 @@ export default function HomeScreen() {
         enabled: isJobSeeker,
     });
 
+    // Submit Inquiry Mutation
+    const inquiryMutation = useMutation({
+        mutationFn: (data: { candidateId: string; message: string }) =>
+            candidateService.submitInquiry(data.candidateId, { message: data.message }),
+        onSuccess: () => {
+            Alert.alert('Inquiry Sent', 'Your inquiry has been submitted to the agency!');
+            setSelectedCandidate(null);
+            setInquiryMessage('');
+            queryClient.invalidateQueries({ queryKey: ['activity', 'inquiries'] });
+        },
+        onError: (err: any) => {
+            Alert.alert('Submission Error', err.response?.data?.error?.message || 'Failed to send inquiry');
+        },
+    });
+
+    const isLoading = isJobSeeker ? vacanciesQuery.isLoading : candidatesQuery.isLoading;
     const candidates = candidatesQuery.data?.data || [];
     const vacancies = vacanciesQuery.data?.data || [];
-    const isLoading = isJobSeeker ? vacanciesQuery.isLoading : candidatesQuery.isLoading;
 
     return (
         <View style={styles.container}>
-            {/* Top Header with Notification Bell & Language Selector */}
+            {/* Top Bar Header */}
             <HeaderBar
-                title="EthioRecruit"
-                showGreeting
-                userName={user?.firstName}
-                subtitle={isJobSeeker ? 'Job Seeker Portal' : 'Employer Portal • Overseas Talent'}
+                title={isJobSeeker ? 'Overseas Vacancies' : 'Employer Portal'}
+                subtitle={
+                    isJobSeeker
+                        ? 'Find & apply to foreign job opportunities'
+                        : 'Hire verified domestic & skilled professionals'
+                }
             />
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-                {/* Search Bar */}
+                {/* Quick Search Card */}
                 <TouchableOpacity
-                    style={styles.searchBarContainer}
-                    activeOpacity={0.9}
+                    style={styles.searchCard}
                     onPress={() => router.push('/(tabs)/browse' as any)}
+                    activeOpacity={0.9}
                 >
                     <Ionicons name="search" size={20} color={Colors.accent} />
-                    <Text style={styles.searchPlaceholderText}>
-                        {isJobSeeker
-                            ? 'Search jobs by country, role...'
-                            : 'Search candidates by skill, experience, country...'}
+                    <Text style={styles.searchPlaceholder}>
+                        {isJobSeeker ? 'Search overseas vacancies...' : 'Search certified candidates by skill, experience...'}
                     </Text>
-                    <View style={styles.searchBadge}>
-                        <Ionicons name="filter-outline" size={14} color={Colors.white} />
-                    </View>
                 </TouchableOpacity>
 
-                {/* Quick Stats Banner */}
-                <View style={styles.statsCardContainer}>
-                    {(isJobSeeker
-                        ? [
-                            { icon: 'briefcase', label: 'Active Vacancies', value: '120+' },
-                            { icon: 'document-text', label: 'Applications', value: 'My Activity' },
-                            { icon: 'checkmark-circle', label: 'Verified Agencies', value: '25+' },
-                        ]
-                        : [
-                            { icon: 'people', label: 'Verified Candidates', value: `${candidates.length || '50'}+` },
-                            { icon: 'chatbubbles', label: 'Direct Inquiries', value: 'Instant' },
-                            { icon: 'shield-checkmark', label: 'Medical Cleared', value: '100%' },
-                        ]
-                    ).map((stat, idx) => (
-                        <View key={idx} style={styles.statCard}>
-                            <View style={styles.statIconBadge}>
-                                <Ionicons name={stat.icon as any} size={18} color={Colors.accent} />
+                {/* Stat Highlights (Employer Mode) */}
+                {!isJobSeeker && (
+                    <View style={styles.statsRow}>
+                        <View style={styles.statCard}>
+                            <View style={[styles.statIconBox, { backgroundColor: Colors.accent + '20' }]}>
+                                <Ionicons name="people" size={18} color={Colors.accentDark} />
                             </View>
-                            <Text style={styles.statValue}>{stat.value}</Text>
-                            <Text style={styles.statLabel}>{stat.label}</Text>
+                            <Text style={styles.statValue}>1,250+</Text>
+                            <Text style={styles.statLabel}>Verified Workers</Text>
                         </View>
-                    ))}
-                </View>
 
-                {/* Category Pills */}
-                <View style={styles.sectionTitleRow}>
-                    <Text style={styles.sectionTitle}>Browse Categories</Text>
+                        <View style={styles.statCard}>
+                            <View style={[styles.statIconBox, { backgroundColor: Colors.success + '20' }]}>
+                                <Ionicons name="shield-checkmark" size={18} color={Colors.success} />
+                            </View>
+                            <Text style={styles.statValue}>100%</Text>
+                            <Text style={styles.statLabel}>Medical Cleared</Text>
+                        </View>
+
+                        <View style={styles.statCard}>
+                            <View style={[styles.statIconBox, { backgroundColor: Colors.warning + '20' }]}>
+                                <Ionicons name="time" size={18} color={Colors.warning} />
+                            </View>
+                            <Text style={styles.statValue}>24 Hrs</Text>
+                            <Text style={styles.statLabel}>Avg Response</Text>
+                        </View>
+                    </View>
+                )}
+
+                {/* Categories Horizontal Scroll */}
+                <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>Categories</Text>
                 </View>
 
                 <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.categoriesContainer}
+                    contentContainerStyle={styles.categoryScroll}
                 >
                     {CATEGORIES.map((cat) => {
                         const isActive = selectedCategory === cat.id;
@@ -131,11 +153,8 @@ export default function HomeScreen() {
                                 key={cat.id}
                                 style={[styles.categoryPill, isActive && styles.categoryPillActive]}
                                 onPress={() => setSelectedCategory(cat.id)}
-                                activeOpacity={0.7}
                             >
-                                <Text
-                                    style={[styles.categoryText, isActive && styles.categoryTextActive]}
-                                >
+                                <Text style={[styles.categoryText, isActive && styles.categoryTextActive]}>
                                     {cat.name}
                                 </Text>
                             </TouchableOpacity>
@@ -143,13 +162,13 @@ export default function HomeScreen() {
                     })}
                 </ScrollView>
 
-                {/* Featured Section */}
-                <View style={styles.sectionTitleRow}>
+                {/* Featured Candidates / Vacancies Section */}
+                <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>
-                        {isJobSeeker ? 'Featured Vacancies' : 'Verified Candidates'}
+                        {isJobSeeker ? 'Featured Overseas Vacancies' : 'Featured Verified Candidates'}
                     </Text>
                     <TouchableOpacity onPress={() => router.push('/(tabs)/browse' as any)}>
-                        <Text style={styles.seeAllText}>Explore All →</Text>
+                        <Text style={styles.seeAllText}>See All ({candidates.length})</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -158,23 +177,22 @@ export default function HomeScreen() {
                         <ActivityIndicator size="large" color={Colors.accent} />
                     </View>
                 ) : !isJobSeeker ? (
-                    /* Employer: Featured Candidates */
                     candidates.length === 0 ? (
                         <View style={styles.emptyCard}>
                             <Ionicons name="people-outline" size={42} color={Colors.gray300} />
-                            <Text style={styles.emptyText}>No candidate profiles match this category</Text>
+                            <Text style={styles.emptyText}>No candidates match this category</Text>
                         </View>
                     ) : (
                         candidates.map((cand: any) => (
                             <TouchableOpacity
                                 key={cand.id}
                                 style={styles.candidateCard}
-                                onPress={() => router.push('/(tabs)/browse' as any)}
-                                activeOpacity={0.85}
+                                onPress={() => setViewDetailCandidate(cand)}
+                                activeOpacity={0.88}
                             >
-                                <View style={styles.candidateTop}>
+                                <View style={styles.candidateTopRow}>
                                     <View style={styles.avatarCircle}>
-                                        <Text style={styles.avatarText}>
+                                        <Text style={styles.avatarInitial}>
                                             {cand.firstName?.[0] || 'C'}
                                         </Text>
                                     </View>
@@ -188,81 +206,118 @@ export default function HomeScreen() {
                                             )}
                                         </View>
                                         <Text style={styles.candidateSub}>
-                                            {cand.category?.name || 'Domestic Worker'} • {cand.yearsOfExperience} Yrs Exp
+                                            {cand.category?.name || 'Domestic Worker'} • {cand.yearsOfExperience || cand.experienceYears || '1+'} yrs exp
                                         </Text>
                                     </View>
 
-                                    <View
-                                        style={[
-                                            styles.medicalBadge,
-                                            cand.medicalStatus === 'cleared'
-                                                ? styles.medicalCleared
-                                                : styles.medicalPending,
-                                        ]}
-                                    >
-                                        <Text
-                                            style={[
-                                                styles.medicalBadgeText,
-                                                cand.medicalStatus === 'cleared' && { color: Colors.success },
-                                            ]}
-                                        >
+                                    <View style={styles.clearedBadge}>
+                                        <Text style={styles.clearedText}>
                                             {cand.medicalStatus === 'cleared' ? 'Medical Cleared' : 'Pending'}
                                         </Text>
                                     </View>
                                 </View>
 
                                 {cand.summary ? (
-                                    <Text style={styles.summarySnippet} numberOfLines={2}>
+                                    <Text style={styles.candidateBio} numberOfLines={2}>
                                         {cand.summary}
                                     </Text>
                                 ) : null}
 
-                                <View style={styles.cardFooter}>
-                                    <View style={styles.agencyBadge}>
-                                        <Ionicons name="business-outline" size={13} color={Colors.gray600} />
+                                <View style={styles.candidateFooter}>
+                                    <View style={styles.agencyRow}>
+                                        <Ionicons name="business" size={14} color={Colors.gray500} />
                                         <Text style={styles.agencyText}>
-                                            {cand.agency?.name || 'Recruitment Agency'}
+                                            {cand.agency?.name || 'EthioRecruit Agency'}
                                         </Text>
                                     </View>
                                     <TouchableOpacity
-                                        style={styles.inquireBtn}
-                                        onPress={() => router.push('/(tabs)/browse' as any)}
+                                        style={styles.inquireShortBtn}
+                                        onPress={() => setSelectedCandidate(cand)}
+                                        activeOpacity={0.8}
                                     >
-                                        <Ionicons name="chatbubble" size={13} color={Colors.white} />
-                                        <Text style={styles.inquireBtnText}>Inquire</Text>
+                                        <Ionicons name="chatbubble-ellipses" size={13} color={Colors.white} />
+                                        <Text style={styles.inquireShortBtnText}>Inquire</Text>
                                     </TouchableOpacity>
                                 </View>
                             </TouchableOpacity>
                         ))
                     )
+                ) : vacancies.length === 0 ? (
+                    <View style={styles.emptyCard}>
+                        <Ionicons name="briefcase-outline" size={42} color={Colors.gray300} />
+                        <Text style={styles.emptyText}>No vacancies match this filter</Text>
+                    </View>
                 ) : (
-                    /* Job Seeker: Featured Vacancies */
-                    vacancies.length === 0 ? (
-                        <View style={styles.emptyCard}>
-                            <Ionicons name="briefcase-outline" size={42} color={Colors.gray300} />
-                            <Text style={styles.emptyText}>No vacancies match this filter</Text>
-                        </View>
-                    ) : (
-                        vacancies.map((vac: any) => (
+                    vacancies.map((vac: any) => (
+                        <TouchableOpacity
+                            key={vac.id}
+                            style={styles.candidateCard}
+                            onPress={() => router.push('/(tabs)/browse' as any)}
+                            activeOpacity={0.85}
+                        >
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                                <Text style={styles.candidateName}>{vac.title}</Text>
+                                <Text style={styles.salaryText}>
+                                    {vac.salaryCurrency} {vac.salaryMin || 'Negotiable'}
+                                </Text>
+                            </View>
+                            <Text style={styles.candidateSub}>
+                                {vac.country} • {vac.agency?.name || 'Verified Agency'}
+                            </Text>
+                        </TouchableOpacity>
+                    ))
+                )}
+            </ScrollView>
+
+            {/* Candidate Detail Modal */}
+            <CandidateDetailModal
+                candidate={viewDetailCandidate}
+                visible={!!viewDetailCandidate}
+                onClose={() => setViewDetailCandidate(null)}
+                onInquire={(cand) => setSelectedCandidate(cand)}
+            />
+
+            {/* Inquiry Modal */}
+            {selectedCandidate && (
+                <Modal visible transparent animationType="slide">
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.modalCard}>
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalTitle}>Inquire Candidate</Text>
+                                <TouchableOpacity onPress={() => setSelectedCandidate(null)}>
+                                    <Ionicons name="close" size={24} color={Colors.gray500} />
+                                </TouchableOpacity>
+                            </View>
+                            <Text style={styles.modalSub}>
+                                Direct inquiry for {selectedCandidate.firstName} {selectedCandidate.lastName} to {selectedCandidate.agency?.name || 'the agency'}.
+                            </Text>
+                            <TextInput
+                                style={styles.modalInput}
+                                placeholder="Specify requirements, start date, budget, or questions..."
+                                placeholderTextColor={Colors.gray400}
+                                multiline
+                                numberOfLines={4}
+                                value={inquiryMessage}
+                                onChangeText={setInquiryMessage}
+                            />
                             <TouchableOpacity
-                                key={vac.id}
-                                style={styles.candidateCard}
-                                onPress={() => router.push('/(tabs)/browse' as any)}
-                                activeOpacity={0.85}
+                                style={[styles.modalSubmit, inquiryMutation.isPending && { opacity: 0.6 }]}
+                                onPress={() =>
+                                    inquiryMutation.mutate({
+                                        candidateId: selectedCandidate.id,
+                                        message: inquiryMessage,
+                                    })
+                                }
+                                disabled={inquiryMutation.isPending}
                             >
-                                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                                    <Text style={styles.candidateName}>{vac.title}</Text>
-                                    <Text style={styles.salaryText}>
-                                        {vac.salaryCurrency} {vac.salaryMin || 'Negotiable'}
-                                    </Text>
-                                </View>
-                                <Text style={styles.candidateSub}>
-                                    {vac.country} • {vac.agency?.name || 'Verified Agency'}
+                                <Text style={styles.modalSubmitText}>
+                                    {inquiryMutation.isPending ? 'Submitting...' : 'Send Inquiry to Agency'}
                                 </Text>
                             </TouchableOpacity>
-                        ))
-                    )}
-            </ScrollView>
+                        </View>
+                    </View>
+                </Modal>
+            )}
         </View>
     );
 }
@@ -270,48 +325,15 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: Colors.background },
     content: { padding: Spacing.lg, paddingBottom: 40 },
-    searchBarContainer: {
+    searchCard: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: Colors.white,
         borderRadius: BorderRadius.xl,
         paddingHorizontal: Spacing.md,
-        height: 52,
+        paddingVertical: 14,
         marginBottom: Spacing.lg,
-        borderWidth: 1,
-        borderColor: Colors.gray200,
         gap: 10,
-        shadowColor: '#000',
-        shadowOpacity: 0.04,
-        shadowOffset: { width: 0, height: 2 },
-        shadowRadius: 8,
-        elevation: 1,
-    },
-    searchPlaceholderText: {
-        flex: 1,
-        color: Colors.gray400,
-        fontSize: 14,
-        fontWeight: '500',
-    },
-    searchBadge: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: Colors.accent,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    statsCardContainer: {
-        flexDirection: 'row',
-        gap: Spacing.xs,
-        marginBottom: Spacing.xl,
-    },
-    statCard: {
-        flex: 1,
-        backgroundColor: Colors.white,
-        borderRadius: BorderRadius.lg,
-        padding: Spacing.md,
-        alignItems: 'center',
         borderWidth: 1,
         borderColor: Colors.gray200,
         shadowColor: '#000',
@@ -320,86 +342,58 @@ const styles = StyleSheet.create({
         shadowRadius: 6,
         elevation: 1,
     },
-    statIconBadge: {
-        width: 34,
-        height: 34,
-        borderRadius: 17,
-        backgroundColor: Colors.accent + '15',
+    searchPlaceholder: { color: Colors.gray400, fontSize: 14, fontWeight: '500' },
+    statsRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg },
+    statCard: {
+        flex: 1,
+        backgroundColor: Colors.white,
+        borderRadius: BorderRadius.lg,
+        padding: Spacing.md,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: Colors.gray200,
+        gap: 4,
+    },
+    statIconBox: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 6,
+        marginBottom: 2,
     },
-    statValue: {
-        fontSize: 16,
-        fontWeight: '800',
-        color: Colors.gray900,
-    },
-    statLabel: {
-        fontSize: 10,
-        color: Colors.gray500,
-        fontWeight: '700',
-        textAlign: 'center',
-        marginTop: 2,
-    },
-    sectionTitleRow: {
+    statValue: { fontSize: 16, fontWeight: '800', color: Colors.gray900 },
+    statLabel: { fontSize: 10, color: Colors.gray500, fontWeight: '600', textAlign: 'center' },
+    sectionHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: Spacing.sm,
+        marginTop: Spacing.xs,
     },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: '800',
-        color: Colors.gray900,
-        letterSpacing: -0.3,
-    },
-    seeAllText: {
-        color: Colors.accent,
-        fontSize: 13,
-        fontWeight: '700',
-    },
-    categoriesContainer: {
-        gap: 8,
-        paddingBottom: Spacing.lg,
-    },
+    sectionTitle: { fontSize: 16, fontWeight: '800', color: Colors.gray900 },
+    seeAllText: { fontSize: 13, fontWeight: '700', color: Colors.accent },
+    categoryScroll: { gap: 8, marginBottom: Spacing.lg, paddingRight: Spacing.lg },
     categoryPill: {
-        paddingHorizontal: 16,
-        paddingVertical: 10,
+        paddingHorizontal: 14,
+        paddingVertical: 8,
         borderRadius: BorderRadius.full,
         backgroundColor: Colors.white,
         borderWidth: 1,
         borderColor: Colors.gray200,
     },
-    categoryPillActive: {
-        backgroundColor: Colors.primary,
-        borderColor: Colors.primary,
-    },
-    categoryText: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: Colors.gray600,
-    },
-    categoryTextActive: {
-        color: Colors.white,
-        fontWeight: '700',
-    },
-    loadingBox: {
-        paddingVertical: 40,
-        alignItems: 'center',
-    },
+    categoryPillActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+    categoryText: { fontSize: 12, fontWeight: '600', color: Colors.gray600 },
+    categoryTextActive: { color: Colors.white, fontWeight: '700' },
+    loadingBox: { paddingVertical: 40, alignItems: 'center' },
     emptyCard: {
         backgroundColor: Colors.white,
-        borderRadius: BorderRadius.lg,
+        borderRadius: BorderRadius.xl,
         padding: Spacing.xl,
         alignItems: 'center',
         gap: 10,
-        borderWidth: 1,
-        borderColor: Colors.gray200,
     },
-    emptyText: {
-        color: Colors.gray400,
-        fontSize: 14,
-    },
+    emptyText: { color: Colors.gray400, fontSize: 14 },
     candidateCard: {
         backgroundColor: Colors.white,
         borderRadius: BorderRadius.xl,
@@ -408,15 +402,12 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: Colors.gray200,
         shadowColor: '#000',
-        shadowOpacity: 0.04,
+        shadowOpacity: 0.03,
         shadowOffset: { width: 0, height: 2 },
-        shadowRadius: 8,
+        shadowRadius: 6,
         elevation: 1,
     },
-    candidateTop: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
+    candidateTopRow: { flexDirection: 'row', alignItems: 'center' },
     avatarCircle: {
         width: 44,
         height: 44,
@@ -425,80 +416,58 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    avatarText: {
-        color: Colors.white,
-        fontSize: 18,
-        fontWeight: '800',
-    },
-    candidateName: {
-        fontSize: 16,
-        fontWeight: '800',
-        color: Colors.gray900,
-    },
-    candidateSub: {
-        fontSize: 12,
-        color: Colors.gray500,
-        marginTop: 2,
-    },
-    medicalBadge: {
+    avatarInitial: { color: Colors.white, fontWeight: '800', fontSize: 18 },
+    candidateName: { fontSize: 15, fontWeight: '800', color: Colors.gray900 },
+    candidateSub: { fontSize: 12, color: Colors.gray500, marginTop: 2 },
+    clearedBadge: {
+        backgroundColor: Colors.success + '15',
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 6,
-        backgroundColor: Colors.gray100,
     },
-    medicalCleared: {
-        backgroundColor: Colors.success + '15',
-    },
-    medicalPending: {
-        backgroundColor: Colors.warning + '15',
-    },
-    medicalBadgeText: {
-        fontSize: 10,
-        fontWeight: '800',
-        color: Colors.gray600,
-    },
-    summarySnippet: {
-        fontSize: 13,
-        color: Colors.gray600,
-        marginTop: 10,
-        lineHeight: 18,
-    },
-    cardFooter: {
+    clearedText: { fontSize: 10, fontWeight: '800', color: Colors.success },
+    candidateBio: { fontSize: 13, color: Colors.gray600, marginTop: 10, lineHeight: 18 },
+    candidateFooter: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginTop: 12,
+        marginTop: 10,
         paddingTop: 10,
         borderTopWidth: 1,
         borderTopColor: Colors.gray100,
     },
-    agencyBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 5,
-    },
-    agencyText: {
-        fontSize: 12,
-        color: Colors.gray600,
-        fontWeight: '500',
-    },
-    inquireBtn: {
+    agencyRow: { flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1 },
+    agencyText: { fontSize: 12, color: Colors.gray600, fontWeight: '500' },
+    inquireShortBtn: {
         backgroundColor: Colors.accent,
         paddingHorizontal: 14,
-        paddingVertical: 7,
+        paddingVertical: 6,
         borderRadius: BorderRadius.md,
         flexDirection: 'row',
         alignItems: 'center',
         gap: 5,
     },
-    inquireBtnText: {
+    inquireShortBtnText: {
         color: Colors.white,
-        fontSize: 12,
-        fontWeight: '700',
-    },
-    salaryText: {
-        fontSize: 14,
         fontWeight: '800',
-        color: Colors.accentDark,
+        fontSize: 12,
     },
+    salaryText: { fontSize: 14, fontWeight: '800', color: Colors.accentDark },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.65)', justifyContent: 'flex-end' },
+    modalCard: { backgroundColor: Colors.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: Spacing.lg, gap: Spacing.md },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    modalTitle: { fontSize: 18, fontWeight: '800', color: Colors.gray900 },
+    modalSub: { fontSize: 13, color: Colors.gray500 },
+    modalInput: {
+        backgroundColor: Colors.gray50,
+        borderRadius: BorderRadius.md,
+        padding: Spacing.md,
+        color: Colors.gray900,
+        height: 100,
+        textAlignVertical: 'top',
+        borderWidth: 1,
+        borderColor: Colors.gray200,
+    },
+    modalSubmit: { backgroundColor: Colors.accent, paddingVertical: 14, borderRadius: BorderRadius.md, alignItems: 'center' },
+    modalSubmitText: { color: Colors.white, fontWeight: '700', fontSize: 15 },
 });

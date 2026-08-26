@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius } from '../../constants';
 import { useAuthStore } from '../../stores/authStore';
 import { HeaderBar } from '../../components/HeaderBar';
+import { CandidateDetailModal } from '../../components/CandidateDetailModal';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { candidateService } from '../../services/candidateService';
 import { vacancyService } from '../../services/vacancyService';
@@ -36,6 +37,7 @@ export default function BrowseScreen() {
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [medicalFilter, setMedicalFilter] = useState<'all' | 'cleared'>('all');
     const [searchQuery, setSearchQuery] = useState('');
+    const [viewDetailCandidate, setViewDetailCandidate] = useState<any>(null);
     const [selectedCandidate, setSelectedCandidate] = useState<any>(null);
     const [inquiryMessage, setInquiryMessage] = useState('');
     const [selectedVacancy, setSelectedVacancy] = useState<any>(null);
@@ -261,7 +263,12 @@ export default function BrowseScreen() {
                         </View>
                     ) : (
                         rawCandidates.map((cand: any) => (
-                            <View key={cand.id} style={styles.card}>
+                            <TouchableOpacity
+                                key={cand.id}
+                                style={styles.card}
+                                onPress={() => setViewDetailCandidate(cand)}
+                                activeOpacity={0.88}
+                            >
                                 <View style={styles.candidateHeader}>
                                     <View style={styles.avatarPlaceholder}>
                                         <Text style={styles.avatarInitial}>{cand.firstName?.[0] || 'C'}</Text>
@@ -276,9 +283,10 @@ export default function BrowseScreen() {
                                             )}
                                         </View>
                                         <Text style={styles.agencyName}>
-                                            {cand.category?.name || 'Worker'} • {cand.yearsOfExperience} yrs exp
+                                            {cand.category?.name || 'Worker'} • {cand.yearsOfExperience || cand.experienceYears || '1+'} yrs exp
                                         </Text>
                                     </View>
+
                                     <View
                                         style={[
                                             styles.statusTag,
@@ -298,7 +306,11 @@ export default function BrowseScreen() {
                                     </View>
                                 </View>
 
-                                {cand.summary ? <Text style={styles.summaryText}>{cand.summary}</Text> : null}
+                                {cand.summary ? (
+                                    <Text style={styles.summaryText} numberOfLines={2}>
+                                        {cand.summary}
+                                    </Text>
+                                ) : null}
 
                                 <View style={styles.cardFooterRow}>
                                     <View style={styles.agencyInfo}>
@@ -307,20 +319,30 @@ export default function BrowseScreen() {
                                             {cand.agency?.name || 'EthioRecruit Agency'}
                                         </Text>
                                     </View>
+
+                                    {/* Prominent "Inquire" button */}
                                     <TouchableOpacity
-                                        style={styles.actionBtn}
+                                        style={styles.inquireShortBtn}
                                         onPress={() => setSelectedCandidate(cand)}
                                         activeOpacity={0.8}
                                     >
-                                        <Ionicons name="chatbubble" size={15} color={Colors.white} />
-                                        <Text style={styles.actionBtnText}>Inquire with Agency</Text>
+                                        <Ionicons name="chatbubble-ellipses" size={14} color={Colors.white} />
+                                        <Text style={styles.inquireShortBtnText}>Inquire</Text>
                                     </TouchableOpacity>
                                 </View>
-                            </View>
+                            </TouchableOpacity>
                         ))
                     )}
                 </ScrollView>
             )}
+
+            {/* Candidate Detail Modal */}
+            <CandidateDetailModal
+                candidate={viewDetailCandidate}
+                visible={!!viewDetailCandidate}
+                onClose={() => setViewDetailCandidate(null)}
+                onInquire={(cand) => setSelectedCandidate(cand)}
+            />
 
             {/* Inquiry Modal */}
             {selectedCandidate && (
@@ -524,7 +546,7 @@ const styles = StyleSheet.create({
     statusCleared: { backgroundColor: Colors.success + '15' },
     statusPending: { backgroundColor: Colors.warning + '15' },
     statusTagText: { fontSize: 10, fontWeight: '800', color: Colors.gray600 },
-    summaryText: { fontSize: 13, color: Colors.gray600, marginTop: 10, marginBottom: 10, lineHeight: 18 },
+    summaryText: { fontSize: 13, color: Colors.gray600, marginTop: 10, marginBottom: 6, lineHeight: 18 },
     cardFooterRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -538,11 +560,27 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
+        flex: 1,
     },
     agencyInfoText: {
         fontSize: 12,
         color: Colors.gray600,
         fontWeight: '500',
+    },
+    inquireShortBtn: {
+        backgroundColor: Colors.accent,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: BorderRadius.md,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        elevation: 1,
+    },
+    inquireShortBtnText: {
+        color: Colors.white,
+        fontWeight: '800',
+        fontSize: 13,
     },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.65)', justifyContent: 'flex-end' },
     modalCard: { backgroundColor: Colors.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: Spacing.lg, gap: Spacing.md },
