@@ -22,6 +22,10 @@ export class CreateCandidateDto {
     @IsOptional()
     fullNameAmharic?: string;
 
+    @IsInt()
+    @IsOptional()
+    age?: number;
+
     @IsOptional()
     @Type(() => Date)
     @IsDate()
@@ -148,7 +152,15 @@ export class CreateCandidateDto {
 
     @IsString()
     @IsOptional()
+    medicalStatus?: string = 'PENDING';
+
+    @IsString()
+    @IsOptional()
     policeClearanceStatus?: string = 'PENDING';
+
+    @IsString()
+    @IsOptional()
+    visaStatus?: string = 'NO_VISA';
 
     @IsInt()
     @IsOptional()
@@ -186,6 +198,18 @@ export class CreateCandidateDto {
     @IsOptional()
     cocCertUrl?: string;
 
+    @IsBoolean()
+    @IsOptional()
+    isPublished?: boolean = true;
+
+    @IsBoolean()
+    @IsOptional()
+    isFeatured?: boolean = false;
+
+    @IsBoolean()
+    @IsOptional()
+    isAvailable?: boolean = true;
+
     @IsArray()
     @IsString({ each: true })
     @IsOptional()
@@ -197,27 +221,7 @@ export class CreateCandidateDto {
     languages?: string[] = [];
 }
 
-export class UpdateCandidateDto extends CreateCandidateDto {
-    @IsBoolean()
-    @IsOptional()
-    isFeatured?: boolean;
-
-    @IsBoolean()
-    @IsOptional()
-    isAvailable?: boolean;
-
-    @IsBoolean()
-    @IsOptional()
-    isPublished?: boolean;
-
-    @IsString()
-    @IsOptional()
-    medicalStatus?: string;
-
-    @IsString()
-    @IsOptional()
-    visaStatus?: string;
-}
+export class UpdateCandidateDto extends CreateCandidateDto { }
 
 export class CandidateFiltersDto {
     @IsOptional()
@@ -254,5 +258,3 @@ export class CandidateFiltersDto {
     @Type(() => Number)
     perPage?: number = 10;
 }
-
-
