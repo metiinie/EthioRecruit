@@ -523,8 +523,8 @@ model CandidateInquiry {
   candidate               Candidate     @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   user                    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId, status])
-  @@index([candidateId, status])
+  @@index([userId, status, createdAt])
+  @@index([candidateId, status, createdAt])
   @@map("candidate_inquiries")
 }
 
@@ -585,7 +585,7 @@ model HiringPipeline {
   stageHistory           PipelineStageHistory[]
   pipelineDocuments      PipelineDocument[]
 
-  @@index([agencyId, currentStage])
+  @@index([agencyId, currentStage, updatedAt])
   @@map("hiring_pipelines")
 }
 
@@ -634,7 +634,7 @@ model Conversation {
   messages  Message[]
 
   @@unique([userId, agencyId])
-  @@index([agencyId, userId])
+  @@index([agencyId, userId, updatedAt])
   @@map("conversations")
 }
 
