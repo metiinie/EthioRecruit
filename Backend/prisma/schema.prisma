@@ -375,6 +375,9 @@ model Candidate {
 
   @@index([agencyId, isAvailable, isPublished])
   @@index([medicalStatus, categoryId, currentCountry])
+  @@index([categoryId, isPublished, isAvailable])
+  @@index([gender, medicalStatus])
+  @@index([lastName, firstName])
   @@map("candidates")
 }
 
@@ -464,6 +467,8 @@ model JobVacancy {
 
   @@index([agencyId, status])
   @@index([status, categoryId, country])
+  @@index([categoryId, status])
+  @@index([country, status])
   @@map("job_vacancies")
 }
 

@@ -42,9 +42,9 @@ export class MediaService {
     }
 
     /**
-     * Generate Cloudinary signature for client-side direct upload from Expo mobile app
+     * Generate presigned direct upload URL and parameters for client-side direct uploads (S3/Cloudinary)
      */
-    generateUploadSignature(folder: string = 'ethiohire') {
+    generatePresignedUploadUrl(folder: string = 'ethiohire', resourceType: 'image' | 'video' | 'raw' = 'image') {
         this.checkConfiguration();
 
         const timestamp = Math.floor(Date.now() / 1000);
@@ -57,15 +57,31 @@ export class MediaService {
             apiSecret,
         );
 
+        const uploadUrl = `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`;
+
         return {
             data: {
-                signature,
-                timestamp,
+                uploadUrl,
+                params: {
+                    api_key: apiKey,
+                    timestamp,
+                    signature,
+                    folder,
+                },
                 cloudName,
                 apiKey,
+                signature,
+                timestamp,
                 folder,
             },
         };
+    }
+
+    /**
+     * Generate Cloudinary signature for client-side direct upload from Expo mobile app
+     */
+    generateUploadSignature(folder: string = 'ethiohire') {
+        return this.generatePresignedUploadUrl(folder, 'image');
     }
 
     /**
