@@ -1,15 +1,41 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateVacancyDto, UpdateVacancyDto, VacancyFiltersDto } from './dto/vacancy.dto';
 import { VacancyStatus, ApplicationStatus } from '@prisma/client';
 
 @Injectable()
 export class VacanciesService {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(
+        private readonly prisma: PrismaService,
+        @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
+    ) { }
+
+    private async evictVacancyCache() {
+        try {
+            const mgr = this.cacheManager as any;
+            if (typeof mgr.reset === 'function') {
+                await mgr.reset();
+            } else if (mgr.store && typeof mgr.store.reset === 'function') {
+                await mgr.store.reset();
+            }
+        } catch (err: any) {
+            // Ignore cache eviction error
+        }
+    }
 
     // ── Public Endpoints ─────────────────────────
 
     async findAllPublic(filters: VacancyFiltersDto) {
+        const cacheKey = `vacancies:public:${JSON.stringify(filters)}`;
+        try {
+            const cached = await this.cacheManager.get(cacheKey);
+            if (cached) return cached;
+        } catch (e) {
+            // Fallback to DB query
+        }
+
         const { categoryId, country, search, page = 1, perPage = 10 } = filters;
         const skip = (page - 1) * perPage;
 
@@ -43,10 +69,18 @@ export class VacanciesService {
 
         const totalPages = Math.ceil(total / perPage);
 
-        return {
+        const result = {
             data,
             meta: { page, perPage, total, totalPages },
         };
+
+        try {
+            await this.cacheManager.set(cacheKey, result, 120000);
+        } catch (e) {
+            // Ignore cache set error
+        }
+
+        return result;
     }
 
     async findOnePublic(id: string) {
@@ -221,6 +255,7 @@ export class VacanciesService {
             },
             include: { category: true },
         });
+        await this.evictVacancyCache();
         return { data: vacancy };
     }
 
@@ -231,6 +266,7 @@ export class VacanciesService {
             data: dto,
             include: { category: true },
         });
+        await this.evictVacancyCache();
         return { data: vacancy };
     }
 
@@ -241,6 +277,7 @@ export class VacanciesService {
             where: { id },
             data: { status, publishedAt },
         });
+        await this.evictVacancyCache();
         return { data: vacancy };
     }
 

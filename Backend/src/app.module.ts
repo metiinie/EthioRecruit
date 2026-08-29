@@ -26,6 +26,12 @@ import { ConversationsModule } from './conversations/conversations.module';
             envFilePath: '.env',
         }),
 
+        // Global Cache Module (2 min default TTL)
+        CacheModule.register({
+            isGlobal: true,
+            ttl: 120000,
+        }),
+
         // Rate limiting: 60 requests per 15 minutes globally
         ThrottlerModule.forRoot([{
             ttl: 900000, // 15 minutes in ms

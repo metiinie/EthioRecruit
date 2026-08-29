@@ -1,10 +1,28 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCandidateDto, UpdateCandidateDto, CandidateFiltersDto } from './dto/candidate.dto';
 
 @Injectable()
 export class CandidatesService {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(
+        private readonly prisma: PrismaService,
+        @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
+    ) { }
+
+    private async evictCandidateCache() {
+        try {
+            const mgr = this.cacheManager as any;
+            if (typeof mgr.reset === 'function') {
+                await mgr.reset();
+            } else if (mgr.store && typeof mgr.store.reset === 'function') {
+                await mgr.store.reset();
+            }
+        } catch (err: any) {
+            // Ignore cache eviction error
+        }
+    }
 
     // Helper to safely resolve category ID from ID or name slug with explicit validation
     private async resolveCategoryId(categoryId?: string): Promise<string> {
@@ -61,6 +79,14 @@ export class CandidatesService {
     // ── Public Endpoints (Employer & Jobseeker Search) ───
 
     async findAllPublic(filters: CandidateFiltersDto) {
+        const cacheKey = `candidates:public:${JSON.stringify(filters)}`;
+        try {
+            const cached = await this.cacheManager.get(cacheKey);
+            if (cached) return cached;
+        } catch (e) {
+            // Fallback to DB query on cache miss or error
+        }
+
         const { categoryId, gender, medicalStatus, country, search, page = 1, perPage = 10 } = filters;
         const skip = (page - 1) * perPage;
 
@@ -114,7 +140,7 @@ export class CandidatesService {
 
         const totalPages = Math.ceil(total / perPage);
 
-        return {
+        const result = {
             data: data.map((c) => this.sanitizePublicCandidate(c)),
             meta: {
                 page,
@@ -125,6 +151,14 @@ export class CandidatesService {
                 prevPage: page > 1 ? page - 1 : null,
             },
         };
+
+        try {
+            await this.cacheManager.set(cacheKey, result, 120000);
+        } catch (e) {
+            // Ignore cache store failure
+        }
+
+        return result;
     }
 
     async findOnePublic(id: string) {
@@ -285,6 +319,7 @@ export class CandidatesService {
             },
             include: { category: true },
         });
+        await this.evictCandidateCache();
         return { data: candidate };
     }
 
@@ -298,6 +333,7 @@ export class CandidatesService {
             data: dto as any,
             include: { category: true },
         });
+        await this.evictCandidateCache();
         return { data: candidate };
     }
 
@@ -307,6 +343,7 @@ export class CandidatesService {
             where: { id },
             data: { isAvailable: false, isPublished: false },
         });
+        await this.evictCandidateCache();
         return { data: { message: 'Candidate soft deleted' } };
     }
 
