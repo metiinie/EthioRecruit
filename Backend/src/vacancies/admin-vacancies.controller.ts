@@ -12,11 +12,12 @@ import { VacanciesService } from './vacancies.service';
 import { CreateVacancyDto, UpdateVacancyDto, VacancyFiltersDto } from './dto/vacancy.dto';
 import { AdminJwtGuard } from '../common/guards/admin-jwt.guard';
 import { AgencyGuard } from '../common/guards/agency.guard';
+import { SubscriptionGuard } from '../common/guards/subscription.guard';
 import { AgencyId } from '../common/decorators/agency-id.decorator';
 import { VacancyStatus } from '@prisma/client';
 
 @Controller('admin/vacancies')
-@UseGuards(AdminJwtGuard, AgencyGuard)
+@UseGuards(AdminJwtGuard, AgencyGuard, SubscriptionGuard)
 export class AdminVacanciesController {
     constructor(private readonly vacanciesService: VacanciesService) { }
 

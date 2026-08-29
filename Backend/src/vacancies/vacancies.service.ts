@@ -147,7 +147,7 @@ export class VacanciesService {
         };
     }
 
-    // Helper to safely resolve category ID from ID or name slug
+    // Helper to safely resolve category ID from ID or name slug with explicit validation
     private async resolveCategoryId(categoryId?: string): Promise<string> {
         if (categoryId) {
             const existingCategory = await this.prisma.category.findFirst({
@@ -161,16 +161,12 @@ export class VacanciesService {
             if (existingCategory) {
                 return existingCategory.id;
             }
+            throw new NotFoundException(`Category '${categoryId}' not found`);
         }
 
-        let fallback = await this.prisma.category.findFirst();
+        const fallback = await this.prisma.category.findFirst();
         if (!fallback) {
-            fallback = await this.prisma.category.create({
-                data: {
-                    name: 'Housemaid',
-                    description: 'General household cleaning and maintenance',
-                },
-            });
+            throw new NotFoundException('No default vacancy category available in database');
         }
         return fallback.id;
     }

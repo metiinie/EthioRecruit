@@ -13,10 +13,11 @@ import { CandidatesService } from './candidates.service';
 import { CreateCandidateDto, UpdateCandidateDto, CandidateFiltersDto } from './dto/candidate.dto';
 import { AdminJwtGuard } from '../common/guards/admin-jwt.guard';
 import { AgencyGuard } from '../common/guards/agency.guard';
+import { SubscriptionGuard } from '../common/guards/subscription.guard';
 import { AgencyId } from '../common/decorators/agency-id.decorator';
 
 @Controller('admin/candidates')
-@UseGuards(AdminJwtGuard, AgencyGuard)
+@UseGuards(AdminJwtGuard, AgencyGuard, SubscriptionGuard)
 export class AdminCandidatesController {
     constructor(private readonly candidatesService: CandidatesService) { }
 

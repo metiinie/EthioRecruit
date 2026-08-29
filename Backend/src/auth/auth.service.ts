@@ -55,7 +55,6 @@ export class AuthService {
             data: {
                 user: this.sanitizeUser(user),
                 token,
-                devOtp: code,
             },
         };
     }
@@ -120,8 +119,8 @@ export class AuthService {
 
     // ── OTP Send ───────────────────────────────────
     async sendOtp(dto: OtpSendDto) {
-        const code = await this.generateAndSendOtp(dto.phone, dto.purpose || 'registration');
-        return { data: { message: 'OTP sent successfully', devOtp: code } };
+        await this.generateAndSendOtp(dto.phone, dto.purpose || 'registration');
+        return { data: { message: 'OTP sent successfully' } };
     }
 
     // ── OTP Verify ─────────────────────────────────
@@ -303,7 +302,30 @@ export class AuthService {
             },
         });
 
-        const devBanner = `
+        // 1. Dispatch to Live SMS Provider if configured in environment (.env)
+        const smsApiUrl = this.configService.get<string>('SMS_API_URL');
+        const smsApiKey = this.configService.get<string>('SMS_API_KEY');
+
+        if (smsApiUrl) {
+            try {
+                await fetch(smsApiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(smsApiKey ? { Authorization: `Bearer ${smsApiKey}` } : {}),
+                    },
+                    body: JSON.stringify({
+                        to: phone,
+                        message: `Your EthioRecruit verification code is ${code}. Valid for 5 minutes.`,
+                    }),
+                });
+                this.logger.log(`[SMS GATEWAY] Dispatched OTP to ${phone}`);
+            } catch (err: any) {
+                this.logger.error(`[SMS GATEWAY ERROR] Failed to send SMS to ${phone}: ${err.message}`);
+            }
+        } else {
+            // 2. Dev mode console banner fallback
+            const devBanner = `
 =============================================================
   🔑 [DEV OTP VERIFICATION CODE]
   Phone:   ${phone}
@@ -311,8 +333,9 @@ export class AuthService {
   CODE:    ${code}
 =============================================================
 `;
-        console.log(devBanner);
-        this.logger.log(`[DEV] OTP for ${phone} (${purpose}): ${code}`);
+            console.log(devBanner);
+            this.logger.log(`[DEV] OTP for ${phone} (${purpose}): ${code}`);
+        }
 
         return code;
     }

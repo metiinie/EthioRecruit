@@ -10,12 +10,13 @@ import {
 import { PipelineService } from './pipeline.service';
 import { AdminJwtGuard } from '../common/guards/admin-jwt.guard';
 import { AgencyGuard } from '../common/guards/agency.guard';
+import { SubscriptionGuard } from '../common/guards/subscription.guard';
 import { AgencyId } from '../common/decorators/agency-id.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { PipelineStage } from '@prisma/client';
 
 @Controller('admin/pipeline')
-@UseGuards(AdminJwtGuard, AgencyGuard)
+@UseGuards(AdminJwtGuard, AgencyGuard, SubscriptionGuard)
 export class PipelineController {
     constructor(private readonly pipelineService: PipelineService) { }
 

@@ -59,26 +59,48 @@ export class PipelineService {
 
         const previousStage = pipeline.currentStage;
 
-        // Transaction to update pipeline stage + log stage history
-        const [updatedPipeline, stageHistory] = await this.prisma.$transaction([
-            this.prisma.hiringPipeline.update({
+        // Atomic transaction to update pipeline stage + log stage history + sync candidate availability
+        return this.prisma.$transaction(async (tx) => {
+            const updatedPipeline = await tx.hiringPipeline.update({
                 where: { id: pipelineId },
                 data: {
                     currentStage: newStage,
                     notes: notes || pipeline.notes,
                 },
-            }),
-            this.prisma.pipelineStageHistory.create({
+            });
+
+            const stageHistory = await tx.pipelineStageHistory.create({
                 data: {
                     pipelineId,
                     stage: newStage,
                     updatedBy: adminId,
                     notes: notes || `Stage moved from ${previousStage} to ${newStage}`,
                 },
-            }),
-        ]);
+            });
 
-        return { data: { pipeline: updatedPipeline, stageHistory } };
+            // Automatically synchronize candidate availability and public listing visibility
+            if (newStage === PipelineStage.DEPLOYED) {
+                // Deployed candidates are unavailable and unpublished from public search
+                await tx.candidate.update({
+                    where: { id: pipeline.candidateId },
+                    data: { isAvailable: false, isPublished: false },
+                });
+            } else if (newStage === PipelineStage.SELECTED) {
+                // Selected candidates are marked unavailable (reserved by employer)
+                await tx.candidate.update({
+                    where: { id: pipeline.candidateId },
+                    data: { isAvailable: false },
+                });
+            } else if (newStage === PipelineStage.CANCELLED) {
+                // Cancelled pipeline applications restore candidate availability and public visibility
+                await tx.candidate.update({
+                    where: { id: pipeline.candidateId },
+                    data: { isAvailable: true, isPublished: true },
+                });
+            }
+
+            return { data: { pipeline: updatedPipeline, stageHistory } };
+        });
     }
 
     // Get full stage history

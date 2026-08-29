@@ -6,7 +6,7 @@ import { CreateCandidateDto, UpdateCandidateDto, CandidateFiltersDto } from './d
 export class CandidatesService {
     constructor(private readonly prisma: PrismaService) { }
 
-    // Helper to safely resolve category ID from ID or name slug
+    // Helper to safely resolve category ID from ID or name slug with explicit validation
     private async resolveCategoryId(categoryId?: string): Promise<string> {
         if (categoryId) {
             const existingCategory = await this.prisma.category.findFirst({
@@ -20,17 +20,13 @@ export class CandidatesService {
             if (existingCategory) {
                 return existingCategory.id;
             }
+            throw new NotFoundException(`Category '${categoryId}' not found`);
         }
 
-        // Fallback to first existing category or create a default "Housemaid" category
-        let fallback = await this.prisma.category.findFirst();
+        // Fallback to existing default category or throw NotFoundException
+        const fallback = await this.prisma.category.findFirst();
         if (!fallback) {
-            fallback = await this.prisma.category.create({
-                data: {
-                    name: 'Housemaid',
-                    description: 'General household cleaning and maintenance',
-                },
-            });
+            throw new NotFoundException('No default recruitment category available in database');
         }
         return fallback.id;
     }
@@ -40,6 +36,26 @@ export class CandidatesService {
         if (!dateVal) return undefined;
         const d = new Date(dateVal);
         return isNaN(d.getTime()) ? undefined : d;
+    }
+
+    private sanitizePublicCandidate(candidate: any) {
+        if (!candidate) return candidate;
+        const {
+            passportNumber,
+            passportIssueDate,
+            passportExpiryDate,
+            passportPlaceOfIssue,
+            nationalIdNumber,
+            emergencyContactPhone,
+            emergencyContactName,
+            emergencyContactRelation,
+            passportCopyUrl,
+            medicalCertUrl,
+            cocCertUrl,
+            phone,
+            ...safeData
+        } = candidate;
+        return safeData;
     }
 
     // ── Public Endpoints (Employer & Jobseeker Search) ───
@@ -70,7 +86,6 @@ export class CandidatesService {
                 { summary: { contains: search, mode: 'insensitive' } },
                 { appliedPosition: { contains: search, mode: 'insensitive' } },
                 { originRegion: { contains: search, mode: 'insensitive' } },
-                { passportNumber: { contains: search, mode: 'insensitive' } },
             ];
         }
 
@@ -100,7 +115,7 @@ export class CandidatesService {
         const totalPages = Math.ceil(total / perPage);
 
         return {
-            data,
+            data: data.map((c) => this.sanitizePublicCandidate(c)),
             meta: {
                 page,
                 perPage,
@@ -136,14 +151,19 @@ export class CandidatesService {
             throw new NotFoundException('Candidate profile not found');
         }
 
-        // Increment CandidateView counter asynchronously
-        await this.prisma.candidateView.upsert({
-            where: { candidateId: id },
-            update: { viewCount: { increment: 1 } },
-            create: { candidateId: id, viewCount: 1 },
-        });
+        // Increment CandidateView counter asynchronously in background (non-blocking)
+        this.prisma.candidateView
+            .upsert({
+                where: { candidateId: id },
+                update: { viewCount: { increment: 1 } },
+                create: { candidateId: id, viewCount: 1 },
+            })
+            .catch((err) => {
+                // Log view counter failure silently without blocking or crashing response
+                console.warn(`[CandidateView] Non-blocking view counter update failed for ${id}:`, err.message);
+            });
 
-        return { data: candidate };
+        return { data: this.sanitizePublicCandidate(candidate) };
     }
 
     async createInquiry(candidateId: string, userId: string, data: any) {
@@ -333,6 +353,10 @@ export class CandidatesService {
         const amharicName = candidate.fullNameAmharic || '';
         const agencyName = candidate.agency?.name || 'EthioRecruit Agency';
 
+        const displayPassportNumber = agencyId
+            ? (candidate.passportNumber || 'N/A')
+            : (candidate.passportNumber ? `${candidate.passportNumber.slice(0, 3)}****${candidate.passportNumber.slice(-2)}` : 'Verifiable via Agency');
+
         const html = `
 <!DOCTYPE html>
 <html>
@@ -402,7 +426,7 @@ export class CandidatesService {
 
     <div class="section-title">Passport & Verification Status</div>
     <div class="grid">
-        <div class="grid-item"><span class="label">Passport Number</span><span class="value">${candidate.passportNumber || 'N/A'}</span></div>
+        <div class="grid-item"><span class="label">Passport Number</span><span class="value">${displayPassportNumber}</span></div>
         <div class="grid-item"><span class="label">Place of Issue</span><span class="value">${candidate.passportPlaceOfIssue || 'Ethiopia'}</span></div>
         <div class="grid-item"><span class="label">COC Training Status</span><span class="value">${candidate.cocStatus}</span></div>
         <div class="grid-item"><span class="label">Medical Status</span><span class="value">${candidate.medicalStatus}</span></div>
@@ -448,27 +472,82 @@ export class CandidatesService {
             throw new BadRequestException('Bulk candidate list must be a non-empty array');
         }
 
-        const createdCandidates = [];
-        const errors = [];
-
-        for (let i = 0; i < candidatesList.length; i++) {
-            try {
-                const res = await this.createAdmin(agencyId, candidatesList[i]);
-                createdCandidates.push(res.data);
-            } catch (err: any) {
-                errors.push({ index: i, candidate: candidatesList[i], error: err.message });
+        // Execute bulk creation inside an atomic Prisma transaction
+        return this.prisma.$transaction(async (tx) => {
+            const createdCandidates = [];
+            for (let i = 0; i < candidatesList.length; i++) {
+                const dto = candidatesList[i];
+                const categoryIdToUse = await this.resolveCategoryId(dto.categoryId);
+                const candidate = await tx.candidate.create({
+                    data: {
+                        agencyId,
+                        categoryId: categoryIdToUse,
+                        firstName: dto.firstName,
+                        middleName: dto.middleName || undefined,
+                        lastName: dto.lastName,
+                        fullNameAmharic: dto.fullNameAmharic || undefined,
+                        dateOfBirth: this.safeDate(dto.dateOfBirth),
+                        gender: dto.gender || 'female',
+                        nationality: dto.nationality || 'Ethiopian',
+                        religion: dto.religion || undefined,
+                        maritalStatus: dto.maritalStatus || undefined,
+                        numberOfChildren: dto.numberOfChildren ? Number(dto.numberOfChildren) : 0,
+                        heightCm: dto.heightCm ? Number(dto.heightCm) : undefined,
+                        weightKg: dto.weightKg ? Number(dto.weightKg) : undefined,
+                        complexion: dto.complexion || undefined,
+                        phone: dto.phone || undefined,
+                        emergencyContactName: dto.emergencyContactName || undefined,
+                        emergencyContactPhone: dto.emergencyContactPhone || undefined,
+                        emergencyContactRelation: dto.emergencyContactRelation || undefined,
+                        summary: dto.summary || undefined,
+                        educationLevel: dto.educationLevel || undefined,
+                        yearsOfExperience: dto.yearsOfExperience ? Number(dto.yearsOfExperience) : 0,
+                        hasOverseasExperience: dto.hasOverseasExperience ?? false,
+                        overseasDetails: dto.overseasDetails || undefined,
+                        localExperienceDetails: dto.localExperienceDetails || undefined,
+                        appliedPosition: dto.appliedPosition || undefined,
+                        currentCountry: dto.currentCountry || 'Ethiopia',
+                        city: (dto as any).currentCity || (dto as any).city || undefined,
+                        originRegion: dto.originRegion || undefined,
+                        passportNumber: dto.passportNumber || undefined,
+                        passportIssueDate: this.safeDate(dto.passportIssueDate),
+                        passportExpiryDate: this.safeDate(dto.passportExpiryDate),
+                        passportPlaceOfIssue: dto.passportPlaceOfIssue || undefined,
+                        nationalIdNumber: dto.nationalIdNumber || undefined,
+                        cocStatus: dto.cocStatus || 'PENDING',
+                        cocIssueDate: this.safeDate(dto.cocIssueDate),
+                        medicalStatus: (dto as any).medicalStatus || 'PENDING',
+                        policeClearanceStatus: dto.policeClearanceStatus || 'PENDING',
+                        visaStatus: (dto as any).visaStatus || 'NO_VISA',
+                        expectedSalary: dto.expectedSalary ? Number(dto.expectedSalary) : undefined,
+                        expectedSalaryCurrency: dto.expectedSalaryCurrency || 'SAR',
+                        contractPeriodYears: dto.contractPeriodYears ? Number(dto.contractPeriodYears) : 2,
+                        photoUrl: dto.photoUrl || undefined,
+                        fullBodyPhotoUrl: dto.fullBodyPhotoUrl || undefined,
+                        videoUrl: dto.videoUrl || undefined,
+                        passportCopyUrl: dto.passportCopyUrl || undefined,
+                        medicalCertUrl: dto.medicalCertUrl || undefined,
+                        cocCertUrl: dto.cocCertUrl || undefined,
+                        skills: Array.isArray(dto.skills) ? dto.skills : [],
+                        languages: Array.isArray(dto.languages) ? dto.languages : [],
+                        isPublished: (dto as any).isPublished ?? true,
+                        isAvailable: true,
+                    },
+                    include: { category: true },
+                });
+                createdCandidates.push(candidate);
             }
-        }
 
-        return {
-            data: {
-                totalProcessed: candidatesList.length,
-                successCount: createdCandidates.length,
-                failureCount: errors.length,
-                createdCandidates,
-                errors,
-            },
-        };
+            return {
+                data: {
+                    totalProcessed: candidatesList.length,
+                    successCount: createdCandidates.length,
+                    failureCount: 0,
+                    createdCandidates,
+                    errors: [],
+                },
+            };
+        });
     }
 
     private async verifyAgencyOwnership(id: string, agencyId: string) {
