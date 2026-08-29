@@ -1,5 +1,6 @@
 import { IsString, IsNotEmpty, IsOptional, IsInt, IsBoolean, IsArray, IsDate, IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
+import { PartialType } from '@nestjs/swagger';
 
 export class CreateCandidateDto {
     @IsString()
@@ -221,7 +222,7 @@ export class CreateCandidateDto {
     languages?: string[] = [];
 }
 
-export class UpdateCandidateDto extends CreateCandidateDto { }
+export class UpdateCandidateDto extends PartialType(CreateCandidateDto) { }
 
 export class CandidateFiltersDto {
     @IsOptional()

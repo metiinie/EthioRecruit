@@ -100,7 +100,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return { event: 'error', message: 'Conversation ID required' };
         }
 
-        const isAuthorized = await this.verifyConversationAccess(payload.conversationId, user);
+        const isAuthorized = await this.verifyConversationAccess(client, payload.conversationId, user);
         if (!isAuthorized) {
             this.logger.warn(`[WSS] Access denied for user ${user.sub} to conversation ${payload.conversationId}`);
             return { event: 'error', message: 'Forbidden: Access denied to conversation' };
@@ -141,7 +141,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         if (!payload.conversationId || !payload.text) return;
 
-        const isAuthorized = await this.verifyConversationAccess(payload.conversationId, user);
+        const isAuthorized = await this.verifyConversationAccess(client, payload.conversationId, user);
         if (!isAuthorized) {
             return { event: 'error', message: 'Forbidden: Cannot send message to unauthorized conversation' };
         }
@@ -170,13 +170,21 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const user = client.data?.user;
         if (!user || !payload?.conversationId) return;
 
-        const isAuthorized = await this.verifyConversationAccess(payload.conversationId, user);
+        const isAuthorized = await this.verifyConversationAccess(client, payload.conversationId, user);
         if (isAuthorized) {
             client.to(`conversation_${payload.conversationId}`).emit('userTyping', payload);
         }
     }
 
-    private async verifyConversationAccess(conversationId: string, user: any): Promise<boolean> {
+    private async verifyConversationAccess(client: Socket, conversationId: string, user: any): Promise<boolean> {
+        if (!client.data.authorizedRooms) {
+            client.data.authorizedRooms = new Set<string>();
+        }
+
+        if (client.data.authorizedRooms.has(conversationId)) {
+            return true;
+        }
+
         try {
             const conversation = await this.prisma.conversation.findUnique({
                 where: { id: conversationId },
@@ -186,18 +194,23 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             const userId = user.sub;
             const agencyId = user.agency_id || user.agencyId;
 
-            if (conversation.userId === userId) return true;
-            if (agencyId && conversation.agencyId === agencyId) return true;
+            let isAuthorized = false;
 
-            // Check if user has admin/staff access to conversation agency
-            if (user.type === 'admin') return true;
+            if (conversation.userId === userId) isAuthorized = true;
+            else if (agencyId && conversation.agencyId === agencyId) isAuthorized = true;
+            else if (user.type === 'admin') isAuthorized = true;
+            else {
+                const orgMember = await this.prisma.organizationMember.findFirst({
+                    where: { userId, organizationId: conversation.agencyId },
+                });
+                if (orgMember) isAuthorized = true;
+            }
 
-            const orgMember = await this.prisma.organizationMember.findFirst({
-                where: { userId, organizationId: conversation.agencyId },
-            });
-            if (orgMember) return true;
+            if (isAuthorized) {
+                client.data.authorizedRooms.add(conversationId);
+            }
 
-            return false;
+            return isAuthorized;
         } catch {
             return false;
         }

@@ -23,11 +23,11 @@ async function bootstrap() {
         credentials: true,
     });
 
-    // Global validation pipe
+    // Global validation pipe with strict payload validation
     app.useGlobalPipes(
         new ValidationPipe({
             whitelist: true,
-            forbidNonWhitelisted: false,
+            forbidNonWhitelisted: true,
             transform: true,
             transformOptions: { enableImplicitConversion: true },
         }),
