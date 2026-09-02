@@ -18,8 +18,22 @@ async function bootstrap() {
     app.setGlobalPrefix('v1');
 
     // CORS
+    const customOrigins = configService.get<string>('CORS_ORIGINS')?.split(',') || [];
     app.enableCors({
-        origin: configService.get<string>('CORS_ORIGINS')?.split(',') || ['http://localhost:8081'],
+        origin: (origin, callback) => {
+            // Allow same-origin / non-browser requests (no Origin header)
+            if (!origin) return callback(null, true);
+            if (
+                origin.includes('localhost') ||
+                origin.includes('127.0.0.1') ||
+                customOrigins.includes(origin) ||
+                /^http:\/\/(192\.168|10|172\.(1[6-9]|2[0-9]|3[0-1]))\.\d+\.\d+(:\d+)?$/.test(origin)
+            ) {
+                return callback(null, true);
+            }
+            // Reject all other origins — do NOT allow unconditionally
+            return callback(new Error('Not allowed by CORS'), false);
+        },
         credentials: true,
     });
 

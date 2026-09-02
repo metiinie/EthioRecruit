@@ -31,10 +31,10 @@ async function main() {
     console.log(`✅ Seeded ${categories.length} categories.`);
 
     // 2. Seed Default Organization / Agency
-    const agencyPhone = '+251921283801';
+    const adminPhone = '+251921283801';
     const adminEmail = 'ibrahim@ethiorecruit.com';
-    const rawPassword = 'password123';
-    const hashedPassword = await bcrypt.hash(rawPassword, 12);
+    const commonPassword = '123456';
+    const hashedPassword = await bcrypt.hash(commonPassword, 12);
 
     console.log('Seeding default organization...');
     let organization = await prisma.organization.findFirst({
@@ -47,7 +47,7 @@ async function main() {
                 name: 'EthioRecruit Recruitment Agency',
                 type: 'AGENCY',
                 licenseNumber: 'AG-2026-ETH01',
-                phone: agencyPhone,
+                phone: adminPhone,
                 email: adminEmail,
                 country: 'Ethiopia',
                 city: 'Addis Ababa',
@@ -60,13 +60,14 @@ async function main() {
         console.log('ℹ️ Organization already exists:', organization.name);
     }
 
-    // 3. Seed AdminUser Ibrahim
+    // 3. Seed AdminUser Ibrahim (Admin Dashboard Only)
     console.log('Seeding Admin User Ibrahim...');
     const adminUser = await prisma.adminUser.upsert({
         where: { email: adminEmail },
         update: {
             firstName: 'Ibrahim',
             lastName: 'Admin',
+            phone: adminPhone,
             password: hashedPassword,
             role: Role.SUPER_ADMIN,
             isActive: true,
@@ -76,42 +77,46 @@ async function main() {
             firstName: 'Ibrahim',
             lastName: 'Admin',
             email: adminEmail,
+            phone: adminPhone,
             password: hashedPassword,
             role: Role.SUPER_ADMIN,
             isActive: true,
         },
     });
-    console.log(`✅ Seeded AdminUser: ${adminUser.firstName} ${adminUser.lastName} (${adminUser.email})`);
+    console.log(`✅ Seeded AdminUser: ${adminUser.firstName} ${adminUser.lastName} (${adminUser.phone} / ${adminUser.email})`);
 
-    // 4. Seed User Ibrahim (Mobile / Platform Admin with Phone 0921283801 -> +251921283801)
-    console.log('Seeding Mobile User Ibrahim...');
+    // 4. Seed Mobile User (Mobile Application Only)
+    const userPhone = '+251918982161';
+    const userEmail = 'user@ethiorecruit.com';
+
+    console.log('Seeding Mobile User...');
     const user = await prisma.user.upsert({
-        where: { phone: agencyPhone },
+        where: { phone: userPhone },
         update: {
-            firstName: 'Ibrahim',
-            lastName: 'Admin',
-            email: adminEmail,
+            firstName: 'Ethio',
+            lastName: 'User',
+            email: userEmail,
             password: hashedPassword,
-            isPlatformAdmin: true,
+            isPlatformAdmin: false,
             phoneVerified: true,
-            preferredMode: PreferredMode.EMPLOYER,
+            preferredMode: PreferredMode.JOB_SEEKER,
             isActive: true,
         },
         create: {
-            firstName: 'Ibrahim',
-            lastName: 'Admin',
-            phone: agencyPhone,
-            email: adminEmail,
+            firstName: 'Ethio',
+            lastName: 'User',
+            phone: userPhone,
+            email: userEmail,
             password: hashedPassword,
-            isPlatformAdmin: true,
+            isPlatformAdmin: false,
             phoneVerified: true,
-            preferredMode: PreferredMode.EMPLOYER,
+            preferredMode: PreferredMode.JOB_SEEKER,
             isActive: true,
         },
     });
-    console.log(`✅ Seeded User: ${user.firstName} ${user.lastName} (${user.phone})`);
+    console.log(`✅ Seeded Mobile User: ${user.firstName} ${user.lastName} (${user.phone})`);
 
-    // 5. Seed Organization Membership
+    // 5. Seed Organization Membership for Mobile User
     await prisma.organizationMember.upsert({
         where: {
             organizationId_userId: {
@@ -119,22 +124,26 @@ async function main() {
                 userId: user.id,
             },
         },
-        update: { role: OrgMemberRole.OWNER, isActive: true },
+        update: { role: OrgMemberRole.RECRUITER, isActive: true },
         create: {
             organizationId: organization.id,
             userId: user.id,
-            role: OrgMemberRole.OWNER,
+            role: OrgMemberRole.RECRUITER,
             isActive: true,
         },
     });
-    console.log('✅ Seeded OrganizationMember link (OWNER).');
+    console.log('✅ Seeded OrganizationMember link.');
 
     console.log('\n=============================================================');
-    console.log('🎉 ADMIN SEEDING COMPLETED SUCCESSFULLY!');
-    console.log(`  Name:     ${adminUser.firstName} ${adminUser.lastName}`);
-    console.log(`  Phone:    ${agencyPhone} (0921283801)`);
+    console.log('🎉 SEEDING COMPLETED SUCCESSFULLY!');
+    console.log('--- ADMIN CREDENTIALS ---');
+    console.log(`  Phone:    ${adminPhone} (0921283801)`);
     console.log(`  Email:    ${adminEmail}`);
-    console.log(`  Password: ${rawPassword}`);
+    console.log(`  Password: ${commonPassword}`);
+    console.log('--- MOBILE USER CREDENTIALS ---');
+    console.log(`  Phone:    ${userPhone} (0918982161)`);
+    console.log(`  Email:    ${userEmail}`);
+    console.log(`  Password: ${commonPassword}`);
     console.log('=============================================================\n');
 }
 

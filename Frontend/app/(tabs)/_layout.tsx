@@ -1,11 +1,17 @@
-import { Tabs } from 'expo-router';
+import { Tabs, Redirect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants';
 import { useAuthStore } from '../../stores/authStore';
 
 export default function TabLayout() {
     const mode = useAuthStore((s) => s.mode);
+    const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
     const isJobSeeker = mode === 'JOB_SEEKER';
+
+    // Route guard: redirect unauthenticated users to Welcome/Login
+    if (!isAuthenticated) {
+        return <Redirect href="/(auth)/welcome" />;
+    }
 
     return (
         <Tabs

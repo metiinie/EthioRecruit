@@ -60,13 +60,15 @@ export default function LoginScreen() {
             }
 
             const response = await authService.login(payload);
-            const user = response.data.user;
-            const token = response.data.token;
-            const adminData = response.data.admin;
+            const user = response?.data?.user;
+            const token = response?.data?.token;
+            const adminData = response?.data?.admin;
 
-            setAuth(user, token);
+            if (user && token) {
+                setAuth(user, token);
+            }
 
-            if (adminData) {
+            if (adminData && token) {
                 setAdminAuth(adminData, token);
             }
 

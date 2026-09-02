@@ -210,7 +210,7 @@ export default function HomeScreen() {
 
                                     <View style={styles.clearedBadge}>
                                         <Text style={styles.clearedText}>
-                                            {cand.medicalStatus === 'cleared' ? 'Medical Cleared' : 'Pending'}
+                                            {(cand.medicalStatus === 'cleared' || cand.medicalStatus === 'PASSED_GAMCA' || cand.medicalStatus === 'PASSED_LOCAL' || cand.medicalStatus === 'PASSED') ? 'Medical Cleared' : 'Pending'}
                                         </Text>
                                     </View>
                                 </View>

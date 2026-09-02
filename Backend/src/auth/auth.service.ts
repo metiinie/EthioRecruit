@@ -59,7 +59,7 @@ export class AuthService {
         };
     }
 
-    // ── User Login (Phone or Email) ────────────────
+    // ── User / Unified Login (Phone or Email) ─────────────
     async login(dto: LoginDto) {
         const rawInput = dto.identifier || dto.phone || dto.email || '';
         const { isEmail, phoneFormatted, rawPhone, email } = this.resolveIdentifier(rawInput);
@@ -68,6 +68,7 @@ export class AuthService {
             throw new BadRequestException('Phone number or email is required');
         }
 
+        // 1. Try finding in standard User model
         const user = await this.prisma.user.findFirst({
             where: isEmail
                 ? { email }
@@ -75,46 +76,66 @@ export class AuthService {
             include: { jobseekerProfile: true, employerProfile: true },
         });
 
-        if (!user) {
+        if (user) {
+            const isPasswordValid = await bcrypt.compare(dto.password, user.password);
+            if (isPasswordValid) {
+                const token = this.signUserToken(user.id, user.preferredMode);
+                return {
+                    data: {
+                        user: this.sanitizeUser(user),
+                        token,
+                    },
+                };
+            }
+            // User found but password invalid — do NOT fall through to admin check
             throw new UnauthorizedException('Invalid phone/email or password');
         }
 
-        const isPasswordValid = await bcrypt.compare(dto.password, user.password);
-        if (!isPasswordValid) {
-            throw new UnauthorizedException('Invalid phone/email or password');
-        }
+        // 2. Only try admin if NO regular user was found at all
+        // (prevents using admin credentials on the user login endpoint)
+        const admin = await this.prisma.adminUser.findFirst({
+            where: isEmail
+                ? { email }
+                : { OR: [{ phone: phoneFormatted }, { phone: rawPhone }, { email: rawInput }] },
+            include: { agency: true },
+        });
 
-        // Check if user has an associated AdminUser profile
-        let adminProfile = null;
-        if (user.email || isEmail) {
-            const adminUser = await this.prisma.adminUser.findFirst({
-                where: { email: user.email || email },
-                include: { agency: true },
-            });
-            if (adminUser) {
-                const adminToken = this.signAdminToken(adminUser.id, adminUser.role, adminUser.agencyId);
-                adminProfile = {
-                    id: adminUser.id,
-                    email: adminUser.email,
-                    firstName: adminUser.firstName,
-                    lastName: adminUser.lastName,
-                    role: adminUser.role,
-                    agencyId: adminUser.agencyId,
-                    agency: adminUser.agency,
-                    token: adminToken,
+        if (admin && admin.isActive) {
+            const isAdminPasswordValid = await bcrypt.compare(dto.password, admin.password);
+            if (isAdminPasswordValid) {
+                const token = this.signAdminToken(admin.id, admin.role, admin.agencyId);
+                return {
+                    data: {
+                        user: {
+                            id: admin.id,
+                            email: admin.email,
+                            firstName: admin.firstName,
+                            lastName: admin.lastName,
+                            phone: admin.phone,
+                            preferredMode: 'EMPLOYER',
+                            isPlatformAdmin: true,
+                            phoneVerified: true,
+                        },
+                        admin: {
+                            id: admin.id,
+                            email: admin.email,
+                            firstName: admin.firstName,
+                            lastName: admin.lastName,
+                            role: admin.role,
+                            agencyId: admin.agencyId,
+                            agency: admin.agency ? {
+                                id: admin.agency.id,
+                                name: admin.agency.name,
+                                logoUrl: admin.agency.logoUrl,
+                            } : null,
+                        },
+                        token,
+                    },
                 };
             }
         }
 
-        const token = this.signUserToken(user.id, user.preferredMode);
-
-        return {
-            data: {
-                user: this.sanitizeUser(user),
-                token,
-                admin: adminProfile,
-            },
-        };
+        throw new UnauthorizedException('Invalid phone/email or password');
     }
 
     // ── OTP Send ───────────────────────────────────
@@ -191,22 +212,11 @@ export class AuthService {
         }
 
         let admin = await this.prisma.adminUser.findFirst({
-            where: isEmail ? { email } : undefined,
+            where: isEmail
+                ? { email }
+                : { OR: [{ phone: phoneFormatted }, { phone: rawPhone }, { email: rawInput }] },
             include: { agency: true },
         });
-
-        // If not found by email, check if there's a User with this phone whose email matches an AdminUser
-        if (!admin && !isEmail) {
-            const user = await this.prisma.user.findFirst({
-                where: { OR: [{ phone: phoneFormatted }, { phone: rawPhone }] },
-            });
-            if (user && user.email) {
-                admin = await this.prisma.adminUser.findFirst({
-                    where: { email: user.email },
-                    include: { agency: true },
-                });
-            }
-        }
 
         if (!admin || !admin.isActive) {
             throw new UnauthorizedException('Invalid credentials or inactive admin account');
@@ -228,11 +238,11 @@ export class AuthService {
                     lastName: admin.lastName,
                     role: admin.role,
                     agencyId: admin.agencyId,
-                    agency: {
+                    agency: admin.agency ? {
                         id: admin.agency.id,
                         name: admin.agency.name,
                         logoUrl: admin.agency.logoUrl,
-                    },
+                    } : null,
                 },
                 token,
             },

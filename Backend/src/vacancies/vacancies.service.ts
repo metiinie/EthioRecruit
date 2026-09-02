@@ -43,7 +43,14 @@ export class VacanciesService {
             status: VacancyStatus.ACTIVE,
         };
 
-        if (categoryId) where.categoryId = categoryId;
+        if (categoryId) {
+            try {
+                const resolvedId = await this.resolveCategoryId(categoryId);
+                where.categoryId = resolvedId;
+            } catch (e) {
+                where.categoryId = categoryId;
+            }
+        }
         if (country) where.country = country;
         if (search) {
             where.OR = [
@@ -153,7 +160,14 @@ export class VacanciesService {
         const skip = (page - 1) * perPage;
 
         const where: any = { agencyId };
-        if (categoryId) where.categoryId = categoryId;
+        if (categoryId) {
+            try {
+                const resolvedId = await this.resolveCategoryId(categoryId);
+                where.categoryId = resolvedId;
+            } catch (e) {
+                where.categoryId = categoryId;
+            }
+        }
         if (status) where.status = status;
         if (search) {
             where.OR = [
@@ -251,7 +265,8 @@ export class VacanciesService {
                 requiredCertificates: dto.requiredCertificates || [],
                 vacanciesCount: dto.vacanciesCount || 1,
                 applicationDeadline: dto.applicationDeadline,
-                status: VacancyStatus.DRAFT,
+                status: dto.status || VacancyStatus.ACTIVE,
+                publishedAt: (dto.status || VacancyStatus.ACTIVE) === VacancyStatus.ACTIVE ? new Date() : undefined,
             },
             include: { category: true },
         });

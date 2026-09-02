@@ -1,10 +1,26 @@
 import axios from 'axios';
+import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { useAuthStore } from '../stores/authStore';
 import { useAdminAuthStore } from '../stores/adminAuthStore';
 
 const getBaseUrl = (): string => {
-    // 1. Dynamic host IP detection from Expo Metro bundler connection
+    // 1. Web environment: Browser executes on developer machine / web domain
+    if (Platform.OS === 'web') {
+        if (typeof window !== 'undefined' && window.location?.hostname) {
+            return `http://${window.location.hostname}:3000/v1`;
+        }
+        return 'http://localhost:3000/v1';
+    }
+
+    // 2. Mobile environment (Expo Go / QR Scanning):
+    // Prioritize explicit environment variable override for mobile
+    const envUrl = process.env.EXPO_PUBLIC_API_URL;
+    if (envUrl) {
+        return envUrl;
+    }
+
+    // Dynamic host IP detection from Expo Metro bundler connection
     const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest2?.extra?.expoGo?.debuggerHost;
     if (hostUri) {
         const ip = hostUri.split(':')[0];
@@ -13,17 +29,14 @@ const getBaseUrl = (): string => {
         }
     }
 
-    // 2. Explicit environment variable
-    const envUrl = process.env.EXPO_PUBLIC_API_URL;
-    if (envUrl) {
-        return envUrl;
-    }
-
     // 3. Fallback to localhost
     return 'http://localhost:3000/v1';
 };
 
 export const API_URL = getBaseUrl();
+if (typeof console !== 'undefined') {
+    console.log('🚀 [EthioRecruit API] Target API_URL:', API_URL, '| Platform:', Platform.OS);
+}
 
 export const api = axios.create({
     baseURL: API_URL,

@@ -99,7 +99,9 @@ export default function BrowseScreen() {
 
     let rawCandidates = candidatesQuery.data?.data || [];
     if (medicalFilter === 'cleared') {
-        rawCandidates = rawCandidates.filter((c: any) => c.medicalStatus === 'cleared');
+        rawCandidates = rawCandidates.filter((c: any) =>
+            c.medicalStatus === 'cleared' || c.medicalStatus === 'PASSED_GAMCA' || c.medicalStatus === 'PASSED_LOCAL' || c.medicalStatus === 'PASSED'
+        );
     }
 
     return (
@@ -290,7 +292,7 @@ export default function BrowseScreen() {
                                     <View
                                         style={[
                                             styles.statusTag,
-                                            cand.medicalStatus === 'cleared'
+                                            (cand.medicalStatus === 'cleared' || cand.medicalStatus === 'PASSED_GAMCA' || cand.medicalStatus === 'PASSED_LOCAL' || cand.medicalStatus === 'PASSED')
                                                 ? styles.statusCleared
                                                 : styles.statusPending,
                                         ]}
@@ -298,10 +300,10 @@ export default function BrowseScreen() {
                                         <Text
                                             style={[
                                                 styles.statusTagText,
-                                                cand.medicalStatus === 'cleared' && { color: Colors.success },
+                                                (cand.medicalStatus === 'cleared' || cand.medicalStatus === 'PASSED_GAMCA' || cand.medicalStatus === 'PASSED_LOCAL' || cand.medicalStatus === 'PASSED') && { color: Colors.success },
                                             ]}
                                         >
-                                            {cand.medicalStatus === 'cleared' ? 'Medical Cleared' : 'Pending'}
+                                            {(cand.medicalStatus === 'cleared' || cand.medicalStatus === 'PASSED_GAMCA' || cand.medicalStatus === 'PASSED_LOCAL' || cand.medicalStatus === 'PASSED') ? 'Medical Cleared' : 'Pending'}
                                         </Text>
                                     </View>
                                 </View>

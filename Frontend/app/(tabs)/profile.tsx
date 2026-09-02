@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, LinkedState } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius } from '../../constants';
@@ -37,17 +37,27 @@ export default function ProfileScreen() {
     };
 
     const handleLogout = () => {
-        Alert.alert('Sign Out', 'Are you sure you want to log out of EthioRecruit?', [
-            { text: 'Cancel', style: 'cancel' },
-            {
-                text: 'Sign Out',
-                style: 'destructive',
-                onPress: () => {
-                    logout();
-                    router.replace('/(auth)/welcome' as any);
+        const performLogout = () => {
+            logout();
+            router.replace('/(auth)/welcome' as any);
+        };
+
+        if (Platform.OS === 'web') {
+            if (typeof window !== 'undefined' && window.confirm('Are you sure you want to log out of EthioRecruit?')) {
+                performLogout();
+            } else if (typeof window === 'undefined') {
+                performLogout();
+            }
+        } else {
+            Alert.alert('Sign Out', 'Are you sure you want to log out of EthioRecruit?', [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Sign Out',
+                    style: 'destructive',
+                    onPress: performLogout,
                 },
-            },
-        ]);
+            ]);
+        }
     };
 
     return (

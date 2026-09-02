@@ -170,6 +170,10 @@ export class CreateVacancyDto {
     @Type(() => Date)
     @IsDate()
     applicationDeadline?: Date;
+
+    @IsEnum(VacancyStatus)
+    @IsOptional()
+    status?: VacancyStatus = VacancyStatus.ACTIVE;
 }
 
 export class UpdateVacancyDto extends CreateVacancyDto {

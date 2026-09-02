@@ -13,6 +13,7 @@ import {
     Linking,
     Modal,
     Switch,
+    Platform,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -197,17 +198,27 @@ export default function AgencyProfileScreen() {
     };
 
     const handleLogout = () => {
-        Alert.alert('Log Out', 'Are you sure you want to sign out of the Admin Workspace?', [
-            { text: 'Cancel', style: 'cancel' },
-            {
-                text: 'Log Out',
-                style: 'destructive',
-                onPress: () => {
-                    logout();
-                    router.replace('/(auth)/admin-login' as any);
+        const performLogout = () => {
+            logout();
+            router.replace('/(auth)/admin-login' as any);
+        };
+
+        if (Platform.OS === 'web') {
+            if (typeof window !== 'undefined' && window.confirm('Are you sure you want to log out of the Admin Workspace?')) {
+                performLogout();
+            } else if (typeof window === 'undefined') {
+                performLogout();
+            }
+        } else {
+            Alert.alert('Log Out', 'Are you sure you want to sign out of the Admin Workspace?', [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Log Out',
+                    style: 'destructive',
+                    onPress: performLogout,
                 },
-            },
-        ]);
+            ]);
+        }
     };
 
     if (loading) {

@@ -27,7 +27,7 @@ export const CandidateDetailModal: React.FC<CandidateDetailModalProps> = ({
 }) => {
     if (!candidate) return null;
 
-    const isMedicalCleared = candidate.medicalStatus === 'cleared';
+    const isMedicalCleared = candidate.medicalStatus === 'cleared' || candidate.medicalStatus === 'PASSED_GAMCA' || candidate.medicalStatus === 'PASSED_LOCAL' || candidate.medicalStatus === 'PASSED';
     const isVerified = candidate.agency?.isVerified;
 
     return (

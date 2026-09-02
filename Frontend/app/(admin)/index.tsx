@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl, ActivityIndicator, Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAdminAuthStore } from '../../stores/adminAuthStore';
@@ -51,8 +51,27 @@ export default function AdminDashboard() {
     };
 
     const handleLogout = () => {
-        logout();
-        router.replace('/(auth)/welcome');
+        const performLogout = () => {
+            logout();
+            router.replace('/(auth)/admin-login' as any);
+        };
+
+        if (Platform.OS === 'web') {
+            if (typeof window !== 'undefined' && window.confirm('Are you sure you want to log out of the Admin Workspace?')) {
+                performLogout();
+            } else if (typeof window === 'undefined') {
+                performLogout();
+            }
+        } else {
+            Alert.alert('Sign Out', 'Are you sure you want to log out of the Admin Workspace?', [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Sign Out',
+                    style: 'destructive',
+                    onPress: performLogout,
+                },
+            ]);
+        }
     };
 
     // Metric Cards matching the user's reference image styling
@@ -157,12 +176,17 @@ export default function AdminDashboard() {
                     <View style={styles.avatarBadge}>
                         <Ionicons name="business" size={24} color="#10B981" />
                     </View>
-                    <View>
+                    <View style={{ flex: 1 }}>
                         <Text style={styles.greeting}>Welcome back,</Text>
                         <Text style={styles.adminName}>{admin?.firstName ? `${admin.firstName} ${admin.lastName || ''}` : 'Agency Administrator'}</Text>
                         <Text style={styles.orgName}>{admin?.organization?.name || 'EthioRecruit Authorized Agency'}</Text>
                     </View>
                 </View>
+
+                <TouchableOpacity style={styles.logoutPill} onPress={handleLogout} activeOpacity={0.8}>
+                    <Ionicons name="log-out-outline" size={16} color="#EF4444" />
+                    <Text style={styles.logoutText}>Log Out</Text>
+                </TouchableOpacity>
             </View>
 
             {/* Section Title */}

@@ -357,6 +357,7 @@ export class CandidatesService {
                 medicalExpiryDate: this.safeDate(medicalData.medicalExpiryDate),
             },
         });
+        await this.evictCandidateCache();
         return { data: candidate };
     }
 
