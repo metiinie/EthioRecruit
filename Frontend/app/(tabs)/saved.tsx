@@ -21,6 +21,8 @@ import { savedService } from '../../services/savedService';
 import { candidateService } from '../../services/candidateService';
 import { vacancyService } from '../../services/vacancyService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { CandidatePostCard } from '../../components/CandidatePostCard';
+import { VacancyPostCard } from '../../components/VacancyPostCard';
 
 export default function SavedTabScreen() {
     const router = useRouter();
@@ -163,88 +165,15 @@ export default function SavedTabScreen() {
                         savedCandidates.map((item: any) => {
                             const cand = item.candidate;
                             if (!cand) return null;
-                            const isCleared = cand.medicalStatus === 'cleared';
                             return (
-                                <TouchableOpacity
+                                <CandidatePostCard
                                     key={item.id}
-                                    style={styles.card}
+                                    candidate={cand}
                                     onPress={() => router.push(`/candidate/${cand.id}` as any)}
-                                    activeOpacity={0.88}
-                                >
-                                    <View style={styles.candidateHeader}>
-                                        {cand.photoUrl ? (
-                                            <Image source={{ uri: cand.photoUrl }} style={styles.avatarImage} />
-                                        ) : (
-                                            <View style={styles.avatarCircle}>
-                                                <Text style={styles.avatarInitial}>
-                                                    {cand.firstName?.[0] || 'C'}
-                                                </Text>
-                                            </View>
-                                        )}
-
-                                        <View style={{ flex: 1, marginLeft: 12 }}>
-                                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                                <Text style={styles.cardTitle}>
-                                                    {cand.firstName} {cand.lastName}
-                                                </Text>
-                                                {cand.agency?.isVerified && (
-                                                    <Ionicons name="checkmark-circle" size={16} color={Colors.accent} />
-                                                )}
-                                            </View>
-                                            <Text style={styles.subText}>
-                                                {cand.category?.name || 'Domestic Worker'} • {cand.yearsOfExperience || cand.experienceYears || '1+'} yrs exp
-                                            </Text>
-                                        </View>
-
-                                        <TouchableOpacity
-                                            style={styles.removeBookmarkBtn}
-                                            onPress={() => unsaveCandidateMutation.mutate(cand.id)}
-                                            activeOpacity={0.7}
-                                        >
-                                            <Ionicons name="bookmark" size={20} color={Colors.warning} />
-                                        </TouchableOpacity>
-                                    </View>
-
-                                    <View style={styles.statusRow}>
-                                        <View
-                                            style={[
-                                                styles.statusBadge,
-                                                isCleared ? styles.statusCleared : styles.statusPending,
-                                            ]}
-                                        >
-                                            <Text
-                                                style={[
-                                                    styles.statusText,
-                                                    { color: isCleared ? Colors.success : Colors.warning },
-                                                ]}
-                                            >
-                                                {isCleared ? 'Medical Cleared' : 'Medical Pending'}
-                                            </Text>
-                                        </View>
-
-                                        <Text style={styles.locationText}>
-                                            {cand.currentCountry || 'Ethiopia'} → {cand.targetCountry || 'Abroad'}
-                                        </Text>
-                                    </View>
-
-                                    <View style={styles.cardFooter}>
-                                        <View style={styles.agencyRow}>
-                                            <Ionicons name="business" size={14} color={Colors.gray500} />
-                                            <Text style={styles.agencyText}>
-                                                {cand.agency?.name || 'EthioRecruit Agency'}
-                                            </Text>
-                                        </View>
-
-                                        <TouchableOpacity
-                                            style={styles.inquireBtn}
-                                            onPress={() => setSelectedCandidate(cand)}
-                                            activeOpacity={0.8}
-                                        >
-                                            <Ionicons name="chatbubble-ellipses" size={13} color={Colors.white} />
-                                            <Text style={styles.inquireBtnText}>Inquire</Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                </TouchableOpacity>
+                                    onInquire={() => setSelectedCandidate(cand)}
+                                    onToggleBookmark={() => unsaveCandidateMutation.mutate(cand.id)}
+                                    isBookmarked={true}
+                                />
                             );
                         })
                     )}
@@ -281,38 +210,14 @@ export default function SavedTabScreen() {
                             const vac = item.vacancy;
                             if (!vac) return null;
                             return (
-                                <View key={item.id} style={styles.card}>
-                                    <View style={styles.candidateHeader}>
-                                        <View style={{ flex: 1 }}>
-                                            <Text style={styles.cardTitle}>{vac.title}</Text>
-                                            <Text style={styles.subText}>{vac.agency?.name || 'Verified Agency'}</Text>
-                                        </View>
-                                        <TouchableOpacity
-                                            style={styles.removeBookmarkBtn}
-                                            onPress={() => unsaveVacancyMutation.mutate(vac.id)}
-                                            activeOpacity={0.7}
-                                        >
-                                            <Ionicons name="bookmark" size={20} color={Colors.warning} />
-                                        </TouchableOpacity>
-                                    </View>
-
-                                    <View style={styles.statusRow}>
-                                        <View style={styles.badgeTeal}>
-                                            <Text style={styles.badgeTealText}>
-                                                {vac.salaryCurrency} {vac.salaryMin || 'Negotiable'}
-                                            </Text>
-                                        </View>
-                                        <Text style={styles.locationText}>{vac.country}</Text>
-                                    </View>
-
-                                    <TouchableOpacity
-                                        style={styles.actionBtnFull}
-                                        onPress={() => setSelectedVacancy(vac)}
-                                        activeOpacity={0.8}
-                                    >
-                                        <Text style={styles.actionBtnText}>Apply Now</Text>
-                                    </TouchableOpacity>
-                                </View>
+                                <VacancyPostCard
+                                    key={item.id}
+                                    vacancy={vac}
+                                    onPress={() => setSelectedVacancy(vac)}
+                                    onApply={() => setSelectedVacancy(vac)}
+                                    onToggleBookmark={() => unsaveVacancyMutation.mutate(vac.id)}
+                                    isBookmarked={true}
+                                />
                             );
                         })
                     )}
