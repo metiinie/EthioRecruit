@@ -87,8 +87,6 @@ export class AuthService {
                     },
                 };
             }
-            // User found but password invalid — do NOT fall through to admin check
-            throw new UnauthorizedException('Invalid phone/email or password');
         }
 
         // 2. Only try admin if NO regular user was found at all

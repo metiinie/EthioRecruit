@@ -219,8 +219,14 @@ export default function NewCandidateWizardScreen() {
         try {
             const parseDate = (val: string) => {
                 if (!val || !val.trim()) return undefined;
-                const d = new Date(val);
+                const d = new Date(val.trim());
                 return isNaN(d.getTime()) ? undefined : d.toISOString();
+            };
+
+            const parseNum = (val: string, isFloat = false) => {
+                if (!val || !val.trim()) return undefined;
+                const n = isFloat ? parseFloat(val.trim()) : parseInt(val.trim(), 10);
+                return isNaN(n) ? undefined : n;
             };
 
             const payload: any = {
@@ -228,13 +234,13 @@ export default function NewCandidateWizardScreen() {
                 middleName: formData.middleName.trim() || undefined,
                 lastName: formData.lastName.trim(),
                 fullNameAmharic: formData.fullNameAmharic.trim() || undefined,
-                age: formData.age ? parseInt(formData.age, 10) : undefined,
+                age: parseNum(formData.age),
                 gender: formData.gender || undefined,
                 religion: formData.religion || undefined,
                 maritalStatus: formData.maritalStatus || undefined,
-                numberOfChildren: formData.numberOfChildren ? parseInt(formData.numberOfChildren, 10) : 0,
-                heightCm: formData.heightCm ? parseFloat(formData.heightCm) : undefined,
-                weightKg: formData.weightKg ? parseFloat(formData.weightKg) : undefined,
+                numberOfChildren: parseNum(formData.numberOfChildren) ?? 0,
+                heightCm: parseNum(formData.heightCm, true),
+                weightKg: parseNum(formData.weightKg, true),
                 complexion: formData.complexion || undefined,
 
                 phone: formData.phone || undefined,
@@ -258,7 +264,7 @@ export default function NewCandidateWizardScreen() {
 
                 categoryId: formData.categoryId || 'Housemaid',
                 appliedPosition: formData.appliedPosition || undefined,
-                yearsOfExperience: formData.yearsOfExperience ? parseInt(formData.yearsOfExperience, 10) : 0,
+                yearsOfExperience: parseNum(formData.yearsOfExperience) ?? 0,
                 hasOverseasExperience: formData.hasOverseasExperience,
                 overseasDetails: formData.overseasDetails || undefined,
                 localExperienceDetails: formData.localExperienceDetails || undefined,
@@ -266,9 +272,9 @@ export default function NewCandidateWizardScreen() {
                 skills: formData.skillsInput ? formData.skillsInput.split(',').map((s) => s.trim()).filter(Boolean) : [],
                 languages: formData.languagesInput ? formData.languagesInput.split(',').map((l) => l.trim()).filter(Boolean) : [],
 
-                expectedSalary: formData.expectedSalary ? parseInt(formData.expectedSalary, 10) : undefined,
+                expectedSalary: parseNum(formData.expectedSalary),
                 expectedSalaryCurrency: formData.expectedSalaryCurrency || 'SAR',
-                contractPeriodYears: formData.contractPeriodYears ? parseInt(formData.contractPeriodYears, 10) : 2,
+                contractPeriodYears: parseNum(formData.contractPeriodYears) ?? 2,
                 summary: formData.summary || undefined,
                 photoUrl: formData.photoUrl || undefined,
                 fullBodyPhotoUrl: formData.fullBodyPhotoUrl || undefined,

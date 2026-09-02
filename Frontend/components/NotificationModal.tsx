@@ -119,7 +119,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ visible, o
                                                 <Ionicons
                                                     name={
                                                         item.type === 'INQUIRY'
-                                                            ? 'chatbubble-text'
+                                                            ? 'chatbubble-outline'
                                                             : item.type === 'APPLICATION'
                                                                 ? 'document-text'
                                                                 : 'notifications'

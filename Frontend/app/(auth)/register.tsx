@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
     View,
     Text,
@@ -9,6 +9,7 @@ import {
     KeyboardAvoidingView,
     Platform,
     ScrollView,
+    Pressable,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,6 +29,12 @@ export default function RegisterScreen() {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+
+    const firstNameRef = useRef<TextInput>(null);
+    const lastNameRef = useRef<TextInput>(null);
+    const phoneRef = useRef<TextInput>(null);
+    const passwordRef = useRef<TextInput>(null);
+    const confirmPasswordRef = useRef<TextInput>(null);
 
     const sanitizePhone = (raw: string): string => {
         let digits = raw.replace(/\D/g, '');
@@ -82,7 +89,6 @@ export default function RegisterScreen() {
         }
     };
 
-
     return (
         <KeyboardAvoidingView
             style={styles.container}
@@ -108,33 +114,45 @@ export default function RegisterScreen() {
 
                 <View style={styles.form}>
                     <View style={styles.row}>
-                        <View style={[styles.inputGroup, { flex: 1 }]}>
+                        <Pressable
+                            style={[styles.inputGroup, { flex: 1 }]}
+                            onPress={() => firstNameRef.current?.focus()}
+                        >
                             <Text style={styles.label}>First Name</Text>
                             <TextInput
+                                ref={firstNameRef}
                                 style={styles.inputFull}
                                 placeholder="Abebe"
                                 placeholderTextColor={Colors.gray500}
                                 value={firstName}
                                 onChangeText={setFirstName}
                             />
-                        </View>
-                        <View style={[styles.inputGroup, { flex: 1 }]}>
+                        </Pressable>
+                        <Pressable
+                            style={[styles.inputGroup, { flex: 1 }]}
+                            onPress={() => lastNameRef.current?.focus()}
+                        >
                             <Text style={styles.label}>Last Name</Text>
                             <TextInput
+                                ref={lastNameRef}
                                 style={styles.inputFull}
                                 placeholder="Kebede"
                                 placeholderTextColor={Colors.gray500}
                                 value={lastName}
                                 onChangeText={setLastName}
                             />
-                        </View>
+                        </Pressable>
                     </View>
 
                     <View style={styles.inputGroup}>
                         <Text style={styles.label}>Phone Number</Text>
-                        <View style={styles.inputRow}>
+                        <Pressable
+                            style={styles.inputRow}
+                            onPress={() => phoneRef.current?.focus()}
+                        >
                             <Text style={styles.prefix}>+251</Text>
                             <TextInput
+                                ref={phoneRef}
                                 style={styles.input}
                                 placeholder="912345678"
                                 placeholderTextColor={Colors.gray500}
@@ -142,13 +160,17 @@ export default function RegisterScreen() {
                                 value={phone}
                                 onChangeText={setPhone}
                             />
-                        </View>
+                        </Pressable>
                     </View>
 
                     <View style={styles.inputGroup}>
                         <Text style={styles.label}>Password</Text>
-                        <View style={styles.inputRow}>
+                        <Pressable
+                            style={styles.inputRow}
+                            onPress={() => passwordRef.current?.focus()}
+                        >
                             <TextInput
+                                ref={passwordRef}
                                 style={[styles.input, { flex: 1 }]}
                                 placeholder="Min. 6 characters"
                                 placeholderTextColor={Colors.gray500}
@@ -159,19 +181,24 @@ export default function RegisterScreen() {
                             <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
                                 <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={22} color={Colors.gray400} />
                             </TouchableOpacity>
-                        </View>
+                        </Pressable>
                     </View>
 
                     <View style={styles.inputGroup}>
                         <Text style={styles.label}>Confirm Password</Text>
-                        <TextInput
-                            style={styles.inputFull}
-                            placeholder="Re-enter password"
-                            placeholderTextColor={Colors.gray500}
-                            secureTextEntry
-                            value={confirmPassword}
-                            onChangeText={setConfirmPassword}
-                        />
+                        <Pressable
+                            onPress={() => confirmPasswordRef.current?.focus()}
+                        >
+                            <TextInput
+                                ref={confirmPasswordRef}
+                                style={styles.inputFull}
+                                placeholder="Re-enter password"
+                                placeholderTextColor={Colors.gray500}
+                                secureTextEntry
+                                value={confirmPassword}
+                                onChangeText={setConfirmPassword}
+                            />
+                        </Pressable>
                     </View>
 
                     <TouchableOpacity
@@ -217,7 +244,14 @@ const styles = StyleSheet.create({
         borderColor: Colors.gray700,
     },
     prefix: { color: Colors.gray400, fontSize: 16, marginRight: 8, fontWeight: '600' },
-    input: { flex: 1, color: Colors.white, fontSize: 16 },
+    input: {
+        flex: 1,
+        color: Colors.white,
+        fontSize: 16,
+        height: '100%',
+        alignSelf: 'stretch',
+        ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}),
+    },
     inputFull: {
         backgroundColor: Colors.primaryLight,
         borderRadius: BorderRadius.md,
@@ -227,6 +261,8 @@ const styles = StyleSheet.create({
         fontSize: 16,
         borderWidth: 1,
         borderColor: Colors.gray700,
+        alignSelf: 'stretch',
+        ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}),
     },
     button: {
         backgroundColor: Colors.accent,

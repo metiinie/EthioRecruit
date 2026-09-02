@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: Colors.background },
     loadingArea: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     loadingText: { marginTop: 10, fontSize: 14, color: Colors.gray600, fontWeight: '600' },
-    listContent: { padding: Spacing.lg, gap: Spacing.md, paddingBottom: 40 },
+    listContent: { padding: Spacing.lg, gap: Spacing.md, paddingBottom: 120 },
     emptyContainer: {
         backgroundColor: Colors.white,
         borderRadius: BorderRadius.xl,

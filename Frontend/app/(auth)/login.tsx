@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
     View,
     Text,
@@ -9,6 +9,7 @@ import {
     KeyboardAvoidingView,
     Platform,
     ScrollView,
+    Pressable,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,6 +28,9 @@ export default function LoginScreen() {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+
+    const identifierInputRef = useRef<TextInput>(null);
+    const passwordInputRef = useRef<TextInput>(null);
 
     const sanitizePhone = (raw: string): string => {
         let digits = raw.replace(/\D/g, '');
@@ -89,7 +93,7 @@ export default function LoginScreen() {
     return (
         <KeyboardAvoidingView
             style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
             <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
                 <TouchableOpacity
@@ -111,9 +115,13 @@ export default function LoginScreen() {
                 <View style={styles.form}>
                     <View style={styles.inputGroup}>
                         <Text style={styles.label}>Phone Number or Email</Text>
-                        <View style={styles.inputRow}>
+                        <Pressable
+                            style={styles.inputRow}
+                            onPress={() => identifierInputRef.current?.focus()}
+                        >
                             <Ionicons name="person-outline" size={20} color={Colors.gray400} style={{ marginRight: 8 }} />
                             <TextInput
+                                ref={identifierInputRef}
                                 style={styles.input}
                                 placeholder="0912345678 or admin@ethiorecruit.com"
                                 placeholderTextColor={Colors.gray500}
@@ -122,13 +130,17 @@ export default function LoginScreen() {
                                 value={identifier}
                                 onChangeText={setIdentifier}
                             />
-                        </View>
+                        </Pressable>
                     </View>
 
                     <View style={styles.inputGroup}>
                         <Text style={styles.label}>Password</Text>
-                        <View style={styles.inputRow}>
+                        <Pressable
+                            style={styles.inputRow}
+                            onPress={() => passwordInputRef.current?.focus()}
+                        >
                             <TextInput
+                                ref={passwordInputRef}
                                 style={[styles.input, { flex: 1 }]}
                                 placeholder="Enter password"
                                 placeholderTextColor={Colors.gray500}
@@ -143,7 +155,7 @@ export default function LoginScreen() {
                                     color={Colors.gray400}
                                 />
                             </TouchableOpacity>
-                        </View>
+                        </Pressable>
                     </View>
 
                     <TouchableOpacity
@@ -172,7 +184,6 @@ export default function LoginScreen() {
     );
 }
 
-
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: Colors.primary },
     scroll: { flexGrow: 1, paddingHorizontal: Spacing.lg, paddingTop: 60, paddingBottom: 40 },
@@ -192,8 +203,14 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: Colors.gray700,
     },
-    prefix: { color: Colors.gray400, fontSize: 16, marginRight: 8, fontWeight: '600' },
-    input: { flex: 1, color: Colors.white, fontSize: 16 },
+    input: {
+        flex: 1,
+        color: Colors.white,
+        fontSize: 16,
+        height: '100%',
+        alignSelf: 'stretch',
+        ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}),
+    },
     button: {
         backgroundColor: Colors.accent,
         paddingVertical: 18,

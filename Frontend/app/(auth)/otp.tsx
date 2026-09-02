@@ -6,6 +6,7 @@ import {
     TouchableOpacity,
     StyleSheet,
     Alert,
+    Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -220,6 +221,7 @@ const styles = StyleSheet.create({
         fontSize: 22,
         fontWeight: '700',
         textAlign: 'center',
+        ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}),
     },
     codeInputFilled: { borderColor: Colors.accent },
     button: {

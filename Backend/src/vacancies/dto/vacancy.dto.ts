@@ -208,5 +208,10 @@ export class VacancyFiltersDto {
     @IsInt()
     @Type(() => Number)
     perPage?: number = 10;
+
+    @IsOptional()
+    @IsInt()
+    @Type(() => Number)
+    limit?: number;
 }
 

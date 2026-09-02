@@ -13,7 +13,6 @@ import { UserJwtGuard } from '../common/guards/user-jwt.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 @Controller('vacancies')
-@UseGuards(UserJwtGuard)
 export class VacanciesController {
     constructor(private readonly vacanciesService: VacanciesService) { }
 
@@ -28,6 +27,7 @@ export class VacanciesController {
     }
 
     @Post(':id/apply')
+    @UseGuards(UserJwtGuard)
     apply(
         @Param('id') id: string,
         @CurrentUser('id') userId: string,

@@ -1,6 +1,13 @@
 import { IsString, IsNotEmpty, IsOptional, IsInt, IsBoolean, IsArray, IsDate, IsNumber } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { PartialType } from '@nestjs/swagger';
+
+const sanitizeEmpty = ({ value }: { value: any }) => {
+    if (value === '' || value === null || value === undefined) return undefined;
+    if (typeof value === 'string' && !value.trim()) return undefined;
+    if (value instanceof Date && isNaN(value.getTime())) return undefined;
+    return value;
+};
 
 export class CreateCandidateDto {
     @IsString()
@@ -23,11 +30,13 @@ export class CreateCandidateDto {
     @IsOptional()
     fullNameAmharic?: string;
 
-    @IsInt()
     @IsOptional()
+    @Transform(sanitizeEmpty)
+    @IsInt()
     age?: number;
 
     @IsOptional()
+    @Transform(sanitizeEmpty)
     @Type(() => Date)
     @IsDate()
     dateOfBirth?: Date;
@@ -48,16 +57,19 @@ export class CreateCandidateDto {
     @IsOptional()
     maritalStatus?: string;
 
-    @IsInt()
     @IsOptional()
+    @Transform(sanitizeEmpty)
+    @IsInt()
     numberOfChildren?: number = 0;
 
-    @IsNumber()
     @IsOptional()
+    @Transform(sanitizeEmpty)
+    @IsNumber()
     heightCm?: number;
 
-    @IsNumber()
     @IsOptional()
+    @Transform(sanitizeEmpty)
+    @IsNumber()
     weightKg?: number;
 
     @IsString()
@@ -88,8 +100,9 @@ export class CreateCandidateDto {
     @IsOptional()
     educationLevel?: string;
 
-    @IsInt()
     @IsOptional()
+    @Transform(sanitizeEmpty)
+    @IsInt()
     yearsOfExperience?: number = 0;
 
     @IsBoolean()
@@ -125,11 +138,13 @@ export class CreateCandidateDto {
     passportNumber?: string;
 
     @IsOptional()
+    @Transform(sanitizeEmpty)
     @Type(() => Date)
     @IsDate()
     passportIssueDate?: Date;
 
     @IsOptional()
+    @Transform(sanitizeEmpty)
     @Type(() => Date)
     @IsDate()
     passportExpiryDate?: Date;
@@ -147,6 +162,7 @@ export class CreateCandidateDto {
     cocStatus?: string = 'PENDING';
 
     @IsOptional()
+    @Transform(sanitizeEmpty)
     @Type(() => Date)
     @IsDate()
     cocIssueDate?: Date;
@@ -163,16 +179,18 @@ export class CreateCandidateDto {
     @IsOptional()
     visaStatus?: string = 'NO_VISA';
 
-    @IsInt()
     @IsOptional()
+    @Transform(sanitizeEmpty)
+    @IsInt()
     expectedSalary?: number;
 
     @IsString()
     @IsOptional()
     expectedSalaryCurrency?: string = 'SAR';
 
-    @IsInt()
     @IsOptional()
+    @Transform(sanitizeEmpty)
+    @IsInt()
     contractPeriodYears?: number = 2;
 
     @IsString()
@@ -258,4 +276,9 @@ export class CandidateFiltersDto {
     @IsInt()
     @Type(() => Number)
     perPage?: number = 10;
+
+    @IsOptional()
+    @IsInt()
+    @Type(() => Number)
+    limit?: number;
 }

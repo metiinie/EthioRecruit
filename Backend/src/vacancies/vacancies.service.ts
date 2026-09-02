@@ -36,8 +36,9 @@ export class VacanciesService {
             // Fallback to DB query
         }
 
-        const { categoryId, country, search, page = 1, perPage = 10 } = filters;
-        const skip = (page - 1) * perPage;
+        const { categoryId, country, search, page = 1, perPage, limit } = filters as any;
+        const effectivePerPage = perPage || limit || 10;
+        const skip = (page - 1) * effectivePerPage;
 
         const where: any = {
             status: VacancyStatus.ACTIVE,
@@ -68,17 +69,17 @@ export class VacanciesService {
                     agency: { select: { id: true, name: true, logoUrl: true, isVerified: true } },
                 },
                 skip,
-                take: perPage,
+                take: effectivePerPage,
                 orderBy: { createdAt: 'desc' },
             }),
             this.prisma.jobVacancy.count({ where }),
         ]);
 
-        const totalPages = Math.ceil(total / perPage);
+        const totalPages = Math.ceil(total / effectivePerPage);
 
         const result = {
             data,
-            meta: { page, perPage, total, totalPages },
+            meta: { page, perPage: effectivePerPage, total, totalPages },
         };
 
         try {
@@ -198,11 +199,14 @@ export class VacanciesService {
     // Helper to safely resolve category ID from ID or name slug with explicit validation
     private async resolveCategoryId(categoryId?: string): Promise<string> {
         if (categoryId) {
+            const normalized = categoryId.trim().toLowerCase();
+            const searchTerm = normalized === 'cleaning' ? 'cleaner' : categoryId;
             const existingCategory = await this.prisma.category.findFirst({
                 where: {
                     OR: [
                         { id: categoryId },
-                        { name: { equals: categoryId, mode: 'insensitive' } },
+                        { name: { equals: searchTerm, mode: 'insensitive' } },
+                        { name: { contains: searchTerm, mode: 'insensitive' } },
                     ],
                 },
             });
@@ -276,9 +280,22 @@ export class VacanciesService {
 
     async updateAdmin(id: string, agencyId: string, dto: UpdateVacancyDto) {
         await this.verifyAgencyOwnership(id, agencyId);
+
+        // Resolve categoryId safely if provided; strip sensitive/protected fields from update payload
+        const { categoryId: rawCategoryId, ...rest } = dto as any;
+        const updateData: any = { ...rest };
+
+        // Prevent caller from overwriting tenancy fields via the update body
+        delete updateData.agencyId;
+        delete updateData.id;
+
+        if (rawCategoryId) {
+            updateData.categoryId = await this.resolveCategoryId(rawCategoryId);
+        }
+
         const vacancy = await this.prisma.jobVacancy.update({
             where: { id },
-            data: dto,
+            data: updateData,
             include: { category: true },
         });
         await this.evictVacancyCache();

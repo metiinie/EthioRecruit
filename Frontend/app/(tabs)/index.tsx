@@ -18,6 +18,8 @@ import { HeaderBar } from '../../components/HeaderBar';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { candidateService } from '../../services/candidateService';
 import { vacancyService } from '../../services/vacancyService';
+import { CandidatePostCard } from '../../components/CandidatePostCard';
+import { VacancyPostCard } from '../../components/VacancyPostCard';
 
 const CATEGORIES = [
     { id: 'all', name: 'All Categories' },
@@ -26,7 +28,7 @@ const CATEGORIES = [
     { id: 'driver', name: 'Driver' },
     { id: 'cook', name: 'Cook' },
     { id: 'caregiver', name: 'Caregiver' },
-    { id: 'cleaning', name: 'Cleaning' },
+    { id: 'cleaner', name: 'Cleaner' },
 ];
 
 export default function HomeScreen() {
@@ -182,62 +184,12 @@ export default function HomeScreen() {
                         </View>
                     ) : (
                         candidates.map((cand: any) => (
-                            <TouchableOpacity
+                            <CandidatePostCard
                                 key={cand.id}
-                                style={styles.candidateCard}
+                                candidate={cand}
                                 onPress={() => router.push(`/candidate/${cand.id}` as any)}
-                                activeOpacity={0.88}
-                            >
-                                <View style={styles.candidateTopRow}>
-                                    <View style={styles.avatarCircle}>
-                                        <Text style={styles.avatarInitial}>
-                                            {cand.firstName?.[0] || 'C'}
-                                        </Text>
-                                    </View>
-                                    <View style={{ flex: 1, marginLeft: 12 }}>
-                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                            <Text style={styles.candidateName}>
-                                                {cand.firstName} {cand.lastName?.[0]}.
-                                            </Text>
-                                            {cand.agency?.isVerified && (
-                                                <Ionicons name="checkmark-circle" size={16} color={Colors.accent} />
-                                            )}
-                                        </View>
-                                        <Text style={styles.candidateSub}>
-                                            {cand.category?.name || 'Domestic Worker'} • {cand.yearsOfExperience || cand.experienceYears || '1+'} yrs exp
-                                        </Text>
-                                    </View>
-
-                                    <View style={styles.clearedBadge}>
-                                        <Text style={styles.clearedText}>
-                                            {(cand.medicalStatus === 'cleared' || cand.medicalStatus === 'PASSED_GAMCA' || cand.medicalStatus === 'PASSED_LOCAL' || cand.medicalStatus === 'PASSED') ? 'Medical Cleared' : 'Pending'}
-                                        </Text>
-                                    </View>
-                                </View>
-
-                                {cand.summary ? (
-                                    <Text style={styles.candidateBio} numberOfLines={2}>
-                                        {cand.summary}
-                                    </Text>
-                                ) : null}
-
-                                <View style={styles.candidateFooter}>
-                                    <View style={styles.agencyRow}>
-                                        <Ionicons name="business" size={14} color={Colors.gray500} />
-                                        <Text style={styles.agencyText}>
-                                            {cand.agency?.name || 'EthioRecruit Agency'}
-                                        </Text>
-                                    </View>
-                                    <TouchableOpacity
-                                        style={styles.inquireShortBtn}
-                                        onPress={() => setSelectedCandidate(cand)}
-                                        activeOpacity={0.8}
-                                    >
-                                        <Ionicons name="chatbubble-ellipses" size={13} color={Colors.white} />
-                                        <Text style={styles.inquireShortBtnText}>Inquire</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            </TouchableOpacity>
+                                onInquire={() => setSelectedCandidate(cand)}
+                            />
                         ))
                     )
                 ) : vacancies.length === 0 ? (
@@ -247,22 +199,12 @@ export default function HomeScreen() {
                     </View>
                 ) : (
                     vacancies.map((vac: any) => (
-                        <TouchableOpacity
+                        <VacancyPostCard
                             key={vac.id}
-                            style={styles.candidateCard}
+                            vacancy={vac}
                             onPress={() => router.push('/(tabs)/browse' as any)}
-                            activeOpacity={0.85}
-                        >
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                                <Text style={styles.candidateName}>{vac.title}</Text>
-                                <Text style={styles.salaryText}>
-                                    {vac.salaryCurrency} {vac.salaryMin || 'Negotiable'}
-                                </Text>
-                            </View>
-                            <Text style={styles.candidateSub}>
-                                {vac.country} • {vac.agency?.name || 'Verified Agency'}
-                            </Text>
-                        </TouchableOpacity>
+                            onApply={() => router.push('/(tabs)/browse' as any)}
+                        />
                     ))
                 )}
             </ScrollView>
@@ -314,7 +256,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: Colors.background },
-    content: { padding: Spacing.lg, paddingBottom: 40 },
+    content: { padding: Spacing.lg, paddingBottom: 120 },
     searchCard: {
         flexDirection: 'row',
         alignItems: 'center',

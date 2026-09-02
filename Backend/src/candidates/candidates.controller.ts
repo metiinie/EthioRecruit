@@ -13,7 +13,6 @@ import { UserJwtGuard } from '../common/guards/user-jwt.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 @Controller('candidates')
-@UseGuards(UserJwtGuard)
 export class CandidatesController {
     constructor(private readonly candidatesService: CandidatesService) { }
 
@@ -33,6 +32,7 @@ export class CandidatesController {
     }
 
     @Post(':id/inquiry')
+    @UseGuards(UserJwtGuard)
     createInquiry(
         @Param('id') id: string,
         @CurrentUser('id') userId: string,

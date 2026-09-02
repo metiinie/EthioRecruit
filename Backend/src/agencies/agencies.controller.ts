@@ -3,7 +3,6 @@ import { AgenciesService } from './agencies.service';
 import { UserJwtGuard } from '../common/guards/user-jwt.guard';
 
 @Controller('agencies')
-@UseGuards(UserJwtGuard)
 export class AgenciesController {
     constructor(private readonly agenciesService: AgenciesService) { }
 

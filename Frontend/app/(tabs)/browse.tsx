@@ -26,7 +26,7 @@ const CATEGORIES = [
     { id: 'driver', name: 'Driver' },
     { id: 'cook', name: 'Cook' },
     { id: 'caregiver', name: 'Caregiver' },
-    { id: 'cleaning', name: 'Cleaning' },
+    { id: 'cleaner', name: 'Cleaner' },
 ];
 
 export default function BrowseScreen() {
@@ -487,7 +487,7 @@ const styles = StyleSheet.create({
         color: Colors.white,
     },
     loadingArea: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    listContent: { padding: Spacing.lg, gap: Spacing.md, paddingBottom: 40 },
+    listContent: { padding: Spacing.lg, gap: Spacing.md, paddingBottom: 120 },
     emptyBox: { alignItems: 'center', paddingTop: 60, gap: 12 },
     emptyText: { color: Colors.gray400, fontSize: 15 },
     card: {

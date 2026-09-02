@@ -27,11 +27,14 @@ export class CandidatesService {
     // Helper to safely resolve category ID from ID or name slug with explicit validation
     private async resolveCategoryId(categoryId?: string): Promise<string> {
         if (categoryId) {
+            const normalized = categoryId.trim().toLowerCase();
+            const searchTerm = normalized === 'cleaning' ? 'cleaner' : categoryId;
             const existingCategory = await this.prisma.category.findFirst({
                 where: {
                     OR: [
                         { id: categoryId },
-                        { name: { equals: categoryId, mode: 'insensitive' } },
+                        { name: { equals: searchTerm, mode: 'insensitive' } },
+                        { name: { contains: searchTerm, mode: 'insensitive' } },
                     ],
                 },
             });
@@ -87,8 +90,9 @@ export class CandidatesService {
             // Fallback to DB query on cache miss or error
         }
 
-        const { categoryId, gender, medicalStatus, country, search, page = 1, perPage = 10 } = filters;
-        const skip = (page - 1) * perPage;
+        const { categoryId, gender, medicalStatus, country, search, page = 1, perPage, limit } = filters as any;
+        const effectivePerPage = perPage || limit || 10;
+        const skip = (page - 1) * effectivePerPage;
 
         const where: any = {
             isPublished: true,
@@ -132,19 +136,19 @@ export class CandidatesService {
                     },
                 },
                 skip,
-                take: perPage,
+                take: effectivePerPage,
                 orderBy: { createdAt: 'desc' },
             }),
             this.prisma.candidate.count({ where }),
         ]);
 
-        const totalPages = Math.ceil(total / perPage);
+        const totalPages = Math.ceil(total / effectivePerPage);
 
         const result = {
             data: data.map((c) => this.sanitizePublicCandidate(c)),
             meta: {
                 page,
-                perPage,
+                perPage: effectivePerPage,
                 total,
                 totalPages,
                 nextPage: page < totalPages ? page + 1 : null,
@@ -325,12 +329,20 @@ export class CandidatesService {
 
     async updateAdmin(id: string, agencyId: string, dto: UpdateCandidateDto) {
         await this.verifyAgencyOwnership(id, agencyId);
-        if (dto.categoryId) {
-            dto.categoryId = await this.resolveCategoryId(dto.categoryId);
+
+        // Resolve categoryId safely; strip protected tenancy fields from update payload
+        const { categoryId: rawCategoryId, ...rest } = dto as any;
+        const updateData: any = { ...rest };
+        delete updateData.agencyId;
+        delete updateData.id;
+
+        if (rawCategoryId) {
+            updateData.categoryId = await this.resolveCategoryId(rawCategoryId);
         }
+
         const candidate = await this.prisma.candidate.update({
             where: { id },
-            data: dto as any,
+            data: updateData,
             include: { category: true },
         });
         await this.evictCandidateCache();

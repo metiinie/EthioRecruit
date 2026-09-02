@@ -249,7 +249,7 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: Colors.background },
-    content: { padding: Spacing.lg, paddingBottom: 40 },
+    content: { padding: Spacing.lg, paddingBottom: 120 },
     profileCard: {
         backgroundColor: Colors.white,
         borderRadius: BorderRadius.xl,

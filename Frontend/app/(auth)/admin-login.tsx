@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
     View,
     Text,
@@ -9,6 +9,7 @@ import {
     KeyboardAvoidingView,
     Platform,
     ScrollView,
+    Pressable,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,6 +26,9 @@ export default function AdminLoginScreen() {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+
+    const identifierInputRef = useRef<TextInput>(null);
+    const passwordInputRef = useRef<TextInput>(null);
 
     const sanitizePhone = (raw: string): string => {
         let digits = raw.replace(/\D/g, '');
@@ -68,7 +72,7 @@ export default function AdminLoginScreen() {
     return (
         <KeyboardAvoidingView
             style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
             <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
                 <TouchableOpacity
@@ -95,21 +99,30 @@ export default function AdminLoginScreen() {
                 <View style={styles.form}>
                     <View style={styles.inputGroup}>
                         <Text style={styles.label}>Email or Phone Number</Text>
-                        <TextInput
-                            style={styles.inputFull}
-                            placeholder="admin@agency.com or 0921283801"
-                            placeholderTextColor={Colors.gray500}
-                            keyboardType="email-address"
-                            autoCapitalize="none"
-                            value={identifier}
-                            onChangeText={setIdentifier}
-                        />
+                        <Pressable
+                            onPress={() => identifierInputRef.current?.focus()}
+                        >
+                            <TextInput
+                                ref={identifierInputRef}
+                                style={styles.inputFull}
+                                placeholder="admin@agency.com or 0921283801"
+                                placeholderTextColor={Colors.gray500}
+                                keyboardType="email-address"
+                                autoCapitalize="none"
+                                value={identifier}
+                                onChangeText={setIdentifier}
+                            />
+                        </Pressable>
                     </View>
 
                     <View style={styles.inputGroup}>
                         <Text style={styles.label}>Password</Text>
-                        <View style={styles.inputRow}>
+                        <Pressable
+                            style={styles.inputRow}
+                            onPress={() => passwordInputRef.current?.focus()}
+                        >
                             <TextInput
+                                ref={passwordInputRef}
                                 style={[styles.input, { flex: 1 }]}
                                 placeholder="Enter password"
                                 placeholderTextColor={Colors.gray500}
@@ -120,7 +133,7 @@ export default function AdminLoginScreen() {
                             <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
                                 <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={22} color={Colors.gray400} />
                             </TouchableOpacity>
-                        </View>
+                        </Pressable>
                     </View>
 
                     <TouchableOpacity
@@ -173,7 +186,13 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: Colors.gray700,
     },
-    input: { color: Colors.white, fontSize: 16 },
+    input: {
+        color: Colors.white,
+        fontSize: 16,
+        height: '100%',
+        alignSelf: 'stretch',
+        ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}),
+    },
     inputFull: {
         backgroundColor: Colors.primaryLight,
         borderRadius: BorderRadius.md,
@@ -183,6 +202,8 @@ const styles = StyleSheet.create({
         fontSize: 16,
         borderWidth: 1,
         borderColor: Colors.gray700,
+        alignSelf: 'stretch',
+        ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}),
     },
     button: {
         backgroundColor: Colors.accent,
