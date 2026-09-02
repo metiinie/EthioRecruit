@@ -18,6 +18,8 @@ import { HeaderBar } from '../../components/HeaderBar';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { candidateService } from '../../services/candidateService';
 import { vacancyService } from '../../services/vacancyService';
+import { CandidatePostCard } from '../../components/CandidatePostCard';
+import { VacancyPostCard } from '../../components/VacancyPostCard';
 
 const CATEGORIES = [
     { id: 'all', name: 'All Categories' },
@@ -214,44 +216,12 @@ export default function BrowseScreen() {
                         </View>
                     ) : (
                         vacanciesQuery.data?.data?.map((vac: any) => (
-                            <View key={vac.id} style={styles.card}>
-                                <View style={styles.cardHeader}>
-                                    <View style={{ flex: 1 }}>
-                                        <Text style={styles.cardTitle}>{vac.title}</Text>
-                                        <Text style={styles.agencyName}>{vac.agency?.name || 'Verified Agency'}</Text>
-                                    </View>
-                                    <View style={styles.badgeTeal}>
-                                        <Text style={styles.badgeTealText}>
-                                            {vac.salaryCurrency} {vac.salaryMin || 'Negotiable'}
-                                        </Text>
-                                    </View>
-                                </View>
-
-                                <View style={styles.metaRow}>
-                                    <View style={styles.metaItem}>
-                                        <Ionicons name="location" size={14} color={Colors.accent} />
-                                        <Text style={styles.metaText}>{vac.country}</Text>
-                                    </View>
-                                    <View style={styles.metaItem}>
-                                        <Ionicons name="calendar" size={14} color={Colors.gray500} />
-                                        <Text style={styles.metaText}>{vac.contractPeriodYears} Year Contract</Text>
-                                    </View>
-                                    {vac.visaSponsorship && (
-                                        <View style={styles.metaItem}>
-                                            <Ionicons name="card" size={14} color={Colors.success} />
-                                            <Text style={[styles.metaText, { color: Colors.success }]}>Visa Included</Text>
-                                        </View>
-                                    )}
-                                </View>
-
-                                <TouchableOpacity
-                                    style={styles.actionBtn}
-                                    onPress={() => setSelectedVacancy(vac)}
-                                    activeOpacity={0.8}
-                                >
-                                    <Text style={styles.actionBtnText}>Apply Now</Text>
-                                </TouchableOpacity>
-                            </View>
+                            <VacancyPostCard
+                                key={vac.id}
+                                vacancy={vac}
+                                onPress={() => setSelectedVacancy(vac)}
+                                onApply={() => setSelectedVacancy(vac)}
+                            />
                         ))
                     )}
                 </ScrollView>
@@ -265,163 +235,105 @@ export default function BrowseScreen() {
                         </View>
                     ) : (
                         rawCandidates.map((cand: any) => (
-                            <TouchableOpacity
+                            <CandidatePostCard
                                 key={cand.id}
-                                style={styles.card}
+                                candidate={cand}
                                 onPress={() => router.push(`/candidate/${cand.id}` as any)}
-                                activeOpacity={0.88}
-                            >
-                                <View style={styles.candidateHeader}>
-                                    <View style={styles.avatarPlaceholder}>
-                                        <Text style={styles.avatarInitial}>{cand.firstName?.[0] || 'C'}</Text>
-                                    </View>
-                                    <View style={{ flex: 1, marginLeft: 12 }}>
-                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                            <Text style={styles.cardTitle}>
-                                                {cand.firstName} {cand.lastName?.[0]}.
-                                            </Text>
-                                            {cand.agency?.isVerified && (
-                                                <Ionicons name="checkmark-circle" size={16} color={Colors.accent} />
-                                            )}
-                                        </View>
-                                        <Text style={styles.agencyName}>
-                                            {cand.category?.name || 'Worker'} • {cand.yearsOfExperience || cand.experienceYears || '1+'} yrs exp
-                                        </Text>
-                                    </View>
-
-                                    <View
-                                        style={[
-                                            styles.statusTag,
-                                            (cand.medicalStatus === 'cleared' || cand.medicalStatus === 'PASSED_GAMCA' || cand.medicalStatus === 'PASSED_LOCAL' || cand.medicalStatus === 'PASSED')
-                                                ? styles.statusCleared
-                                                : styles.statusPending,
-                                        ]}
-                                    >
-                                        <Text
-                                            style={[
-                                                styles.statusTagText,
-                                                (cand.medicalStatus === 'cleared' || cand.medicalStatus === 'PASSED_GAMCA' || cand.medicalStatus === 'PASSED_LOCAL' || cand.medicalStatus === 'PASSED') && { color: Colors.success },
-                                            ]}
-                                        >
-                                            {(cand.medicalStatus === 'cleared' || cand.medicalStatus === 'PASSED_GAMCA' || cand.medicalStatus === 'PASSED_LOCAL' || cand.medicalStatus === 'PASSED') ? 'Medical Cleared' : 'Pending'}
-                                        </Text>
-                                    </View>
-                                </View>
-
-                                {cand.summary ? (
-                                    <Text style={styles.summaryText} numberOfLines={2}>
-                                        {cand.summary}
-                                    </Text>
-                                ) : null}
-
-                                <View style={styles.cardFooterRow}>
-                                    <View style={styles.agencyInfo}>
-                                        <Ionicons name="business-outline" size={14} color={Colors.gray500} />
-                                        <Text style={styles.agencyInfoText}>
-                                            {cand.agency?.name || 'EthioRecruit Agency'}
-                                        </Text>
-                                    </View>
-
-                                    {/* Prominent "Inquire" button */}
-                                    <TouchableOpacity
-                                        style={styles.inquireShortBtn}
-                                        onPress={() => setSelectedCandidate(cand)}
-                                        activeOpacity={0.8}
-                                    >
-                                        <Ionicons name="chatbubble-ellipses" size={14} color={Colors.white} />
-                                        <Text style={styles.inquireShortBtnText}>Inquire</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            </TouchableOpacity>
+                                onInquire={() => setSelectedCandidate(cand)}
+                            />
                         ))
                     )}
                 </ScrollView>
             )}
 
             {/* Inquiry Modal */}
-            {selectedCandidate && (
-                <Modal visible transparent animationType="slide">
-                    <View style={styles.modalOverlay}>
-                        <View style={styles.modalCard}>
-                            <View style={styles.modalHeader}>
-                                <Text style={styles.modalTitle}>Inquire Candidate</Text>
-                                <TouchableOpacity onPress={() => setSelectedCandidate(null)}>
-                                    <Ionicons name="close" size={24} color={Colors.gray500} />
+            {
+                selectedCandidate && (
+                    <Modal visible transparent animationType="slide">
+                        <View style={styles.modalOverlay}>
+                            <View style={styles.modalCard}>
+                                <View style={styles.modalHeader}>
+                                    <Text style={styles.modalTitle}>Inquire Candidate</Text>
+                                    <TouchableOpacity onPress={() => setSelectedCandidate(null)}>
+                                        <Ionicons name="close" size={24} color={Colors.gray500} />
+                                    </TouchableOpacity>
+                                </View>
+                                <Text style={styles.modalSub}>
+                                    Send direct inquiry regarding {selectedCandidate.firstName} {selectedCandidate.lastName} to {selectedCandidate.agency?.name || 'the agency'}.
+                                </Text>
+                                <TextInput
+                                    style={styles.modalInput}
+                                    placeholder="Specify requirements, start date, salary budget, or questions..."
+                                    placeholderTextColor={Colors.gray400}
+                                    multiline
+                                    numberOfLines={4}
+                                    value={inquiryMessage}
+                                    onChangeText={setInquiryMessage}
+                                />
+                                <TouchableOpacity
+                                    style={[styles.modalSubmit, inquiryMutation.isPending && { opacity: 0.6 }]}
+                                    onPress={() =>
+                                        inquiryMutation.mutate({
+                                            candidateId: selectedCandidate.id,
+                                            message: inquiryMessage,
+                                        })
+                                    }
+                                    disabled={inquiryMutation.isPending}
+                                >
+                                    <Text style={styles.modalSubmitText}>
+                                        {inquiryMutation.isPending ? 'Submitting...' : 'Send Inquiry to Agency'}
+                                    </Text>
                                 </TouchableOpacity>
                             </View>
-                            <Text style={styles.modalSub}>
-                                Send direct inquiry regarding {selectedCandidate.firstName} {selectedCandidate.lastName} to {selectedCandidate.agency?.name || 'the agency'}.
-                            </Text>
-                            <TextInput
-                                style={styles.modalInput}
-                                placeholder="Specify requirements, start date, salary budget, or questions..."
-                                placeholderTextColor={Colors.gray400}
-                                multiline
-                                numberOfLines={4}
-                                value={inquiryMessage}
-                                onChangeText={setInquiryMessage}
-                            />
-                            <TouchableOpacity
-                                style={[styles.modalSubmit, inquiryMutation.isPending && { opacity: 0.6 }]}
-                                onPress={() =>
-                                    inquiryMutation.mutate({
-                                        candidateId: selectedCandidate.id,
-                                        message: inquiryMessage,
-                                    })
-                                }
-                                disabled={inquiryMutation.isPending}
-                            >
-                                <Text style={styles.modalSubmitText}>
-                                    {inquiryMutation.isPending ? 'Submitting...' : 'Send Inquiry to Agency'}
-                                </Text>
-                            </TouchableOpacity>
                         </View>
-                    </View>
-                </Modal>
-            )}
+                    </Modal>
+                )
+            }
 
             {/* Apply Modal */}
-            {selectedVacancy && (
-                <Modal visible transparent animationType="slide">
-                    <View style={styles.modalOverlay}>
-                        <View style={styles.modalCard}>
-                            <View style={styles.modalHeader}>
-                                <Text style={styles.modalTitle}>Apply for {selectedVacancy.title}</Text>
-                                <TouchableOpacity onPress={() => setSelectedVacancy(null)}>
-                                    <Ionicons name="close" size={24} color={Colors.gray500} />
+            {
+                selectedVacancy && (
+                    <Modal visible transparent animationType="slide">
+                        <View style={styles.modalOverlay}>
+                            <View style={styles.modalCard}>
+                                <View style={styles.modalHeader}>
+                                    <Text style={styles.modalTitle}>Apply for {selectedVacancy.title}</Text>
+                                    <TouchableOpacity onPress={() => setSelectedVacancy(null)}>
+                                        <Ionicons name="close" size={24} color={Colors.gray500} />
+                                    </TouchableOpacity>
+                                </View>
+                                <Text style={styles.modalSub}>
+                                    Location: {selectedVacancy.country} • Agency: {selectedVacancy.agency?.name}
+                                </Text>
+                                <TextInput
+                                    style={styles.modalInput}
+                                    placeholder="Optional cover letter or note to recruitment agency..."
+                                    placeholderTextColor={Colors.gray400}
+                                    multiline
+                                    numberOfLines={4}
+                                    value={coverLetter}
+                                    onChangeText={setCoverLetter}
+                                />
+                                <TouchableOpacity
+                                    style={[styles.modalSubmit, applyMutation.isPending && { opacity: 0.6 }]}
+                                    onPress={() =>
+                                        applyMutation.mutate({
+                                            vacancyId: selectedVacancy.id,
+                                            coverLetter,
+                                        })
+                                    }
+                                    disabled={applyMutation.isPending}
+                                >
+                                    <Text style={styles.modalSubmitText}>
+                                        {applyMutation.isPending ? 'Submitting...' : 'Confirm Application'}
+                                    </Text>
                                 </TouchableOpacity>
                             </View>
-                            <Text style={styles.modalSub}>
-                                Location: {selectedVacancy.country} • Agency: {selectedVacancy.agency?.name}
-                            </Text>
-                            <TextInput
-                                style={styles.modalInput}
-                                placeholder="Optional cover letter or note to recruitment agency..."
-                                placeholderTextColor={Colors.gray400}
-                                multiline
-                                numberOfLines={4}
-                                value={coverLetter}
-                                onChangeText={setCoverLetter}
-                            />
-                            <TouchableOpacity
-                                style={[styles.modalSubmit, applyMutation.isPending && { opacity: 0.6 }]}
-                                onPress={() =>
-                                    applyMutation.mutate({
-                                        vacancyId: selectedVacancy.id,
-                                        coverLetter,
-                                    })
-                                }
-                                disabled={applyMutation.isPending}
-                            >
-                                <Text style={styles.modalSubmitText}>
-                                    {applyMutation.isPending ? 'Submitting...' : 'Confirm Application'}
-                                </Text>
-                            </TouchableOpacity>
                         </View>
-                    </View>
-                </Modal>
-            )}
-        </View>
+                    </Modal>
+                )
+            }
+        </View >
     );
 }
 
