@@ -1,9 +1,103 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Modal, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius } from '../constants';
-import { getValidImageUri } from '../utils/imageUtils';
+import { getValidImageUri, getBestCandidateAvatar } from '../utils/imageUtils';
 import { AgencyContactBar } from './AgencyContactBar';
+
+export interface CandidatePhotoItem {
+    id: string;
+    type: 'profile' | 'fullBody' | 'passport' | 'medical' | 'coc';
+    label: string;
+    url: string;
+    icon: string;
+}
+
+export function getCandidatePhotos(candidate: any): CandidatePhotoItem[] {
+    if (!candidate) return [];
+    const photos: CandidatePhotoItem[] = [];
+
+    if (candidate.photoUrl && getValidImageUri(candidate.photoUrl)) {
+        photos.push({
+            id: 'photoUrl',
+            type: 'profile',
+            label: 'Profile Photo',
+            url: getValidImageUri(candidate.photoUrl)!,
+            icon: 'person-circle-outline',
+        });
+    }
+
+    if (candidate.fullBodyPhotoUrl && getValidImageUri(candidate.fullBodyPhotoUrl)) {
+        photos.push({
+            id: 'fullBodyPhotoUrl',
+            type: 'fullBody',
+            label: 'Full Body Photo',
+            url: getValidImageUri(candidate.fullBodyPhotoUrl)!,
+            icon: 'body-outline',
+        });
+    }
+
+    if (candidate.passportCopyUrl && getValidImageUri(candidate.passportCopyUrl)) {
+        photos.push({
+            id: 'passportCopyUrl',
+            type: 'passport',
+            label: 'Passport Copy',
+            url: getValidImageUri(candidate.passportCopyUrl)!,
+            icon: 'card-outline',
+        });
+    }
+
+    if (candidate.medicalCertUrl && getValidImageUri(candidate.medicalCertUrl)) {
+        photos.push({
+            id: 'medicalCertUrl',
+            type: 'medical',
+            label: 'Medical Cert',
+            url: getValidImageUri(candidate.medicalCertUrl)!,
+            icon: 'document-text-outline',
+        });
+    }
+
+    if (candidate.cocCertUrl && getValidImageUri(candidate.cocCertUrl)) {
+        photos.push({
+            id: 'cocCertUrl',
+            type: 'coc',
+            label: 'COC Cert',
+            url: getValidImageUri(candidate.cocCertUrl)!,
+            icon: 'ribbon-outline',
+        });
+    }
+
+    if (Array.isArray(candidate.galleryPhotos) && candidate.galleryPhotos.length > 0) {
+        let fullBodyCount = photos.filter(p => p.type === 'fullBody').length;
+        candidate.galleryPhotos.forEach((gUrl: string, gIdx: number) => {
+            const validUri = getValidImageUri(gUrl);
+            if (validUri && !photos.some(p => p.url === validUri)) {
+                // If we haven't reached 5 photos, determine label
+                const isExtraFullBody = fullBodyCount > 0 && photos.length < 5;
+                if (isExtraFullBody) {
+                    fullBodyCount++;
+                    photos.push({
+                        id: `gallery-fullbody-${gIdx}`,
+                        type: 'fullBody',
+                        label: `Full Body ${fullBodyCount}`,
+                        url: validUri,
+                        icon: 'body-outline',
+                    });
+                } else {
+                    photos.push({
+                        id: `gallery-${gIdx}`,
+                        type: 'profile',
+                        label: `Photo ${photos.length + 1}`,
+                        url: validUri,
+                        icon: 'image-outline',
+                    });
+                }
+            }
+        });
+    }
+
+    return photos.slice(0, 5);
+}
 
 interface CandidatePostCardProps {
     candidate: any;
@@ -20,7 +114,12 @@ export function CandidatePostCard({
     onToggleBookmark,
     isBookmarked = false,
 }: CandidatePostCardProps) {
+    const [viewerVisible, setViewerVisible] = useState(false);
+    const [activePhotoIdx, setActivePhotoIdx] = useState(0);
+
     if (!candidate) return null;
+
+    const photos = getCandidatePhotos(candidate);
 
     const isMedicalCleared =
         candidate.medicalStatus === 'cleared' ||
@@ -33,12 +132,25 @@ export function CandidatePostCard({
     const categoryName = candidate.category?.name || candidate.appliedPosition || 'Domestic Worker';
     const expYears = candidate.yearsOfExperience || candidate.experienceYears || '1+';
 
+    const handleOpenPhoto = (idx: number) => {
+        setActivePhotoIdx(idx);
+        setViewerVisible(true);
+    };
+
+    const handlePrevPhoto = () => {
+        if (photos.length === 0) return;
+        setActivePhotoIdx((prev) => (prev > 0 ? prev - 1 : photos.length - 1));
+    };
+
+    const handleNextPhoto = () => {
+        if (photos.length === 0) return;
+        setActivePhotoIdx((prev) => (prev < photos.length - 1 ? prev + 1 : 0));
+    };
+
+    const currentPhoto = photos[activePhotoIdx] || photos[0];
+
     return (
-        <TouchableOpacity
-            style={styles.cardContainer}
-            onPress={onPress}
-            activeOpacity={0.92}
-        >
+        <View style={styles.cardContainer}>
             {/* 1. Feed Post Header: Agency Info */}
             <View style={styles.postHeader}>
                 <View style={styles.agencyInfo}>
@@ -77,9 +189,9 @@ export function CandidatePostCard({
             <View style={styles.divider} />
 
             {/* 2. Candidate Hero Info Row */}
-            <View style={styles.candidateHeroRow}>
-                {getValidImageUri(candidate.photoUrl) ? (
-                    <Image source={{ uri: getValidImageUri(candidate.photoUrl)! }} style={styles.avatarImage} />
+            <TouchableOpacity onPress={onPress} activeOpacity={0.88} style={styles.candidateHeroRow}>
+                {getBestCandidateAvatar(candidate) ? (
+                    <Image source={{ uri: getBestCandidateAvatar(candidate)! }} style={styles.avatarImage} />
                 ) : (
                     <View style={styles.avatarCircle}>
                         <Text style={styles.avatarInitial}>
@@ -102,7 +214,7 @@ export function CandidatePostCard({
                         <Text style={styles.categoryBadgeText}>{categoryName}</Text>
                     </View>
                 </View>
-            </View>
+            </TouchableOpacity>
 
             {/* 3. Metadata Chips Grid */}
             <View style={styles.chipsRow}>
@@ -184,7 +296,8 @@ export function CandidatePostCard({
                     onPress={onPress}
                     activeOpacity={0.8}
                 >
-                    <Text style={styles.secondaryActionText}>View Profile</Text>
+                    <Ionicons name="person-outline" size={15} color={Colors.primary} />
+                    <Text style={styles.secondaryActionText}>View Full Profile</Text>
                     <Ionicons name="chevron-forward" size={14} color={Colors.primary} />
                 </TouchableOpacity>
 
@@ -195,27 +308,27 @@ export function CandidatePostCard({
                         activeOpacity={0.85}
                     >
                         <Ionicons name="chatbubble-ellipses" size={15} color={Colors.white} />
-                        <Text style={styles.primaryActionText}>Inquire Candidate</Text>
+                        <Text style={styles.primaryActionText}>Inquire</Text>
                     </TouchableOpacity>
                 )}
             </View>
-        </TouchableOpacity>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     cardContainer: {
-        backgroundColor: Colors.white,
-        borderRadius: BorderRadius.xl,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
         padding: Spacing.md,
-        borderWidth: 1,
-        borderColor: Colors.gray200,
-        marginBottom: Spacing.md,
-        shadowColor: '#000',
-        shadowOpacity: 0.04,
-        shadowOffset: { width: 0, height: 3 },
-        shadowRadius: 8,
-        elevation: 2,
+        borderWidth: 1.5,
+        borderColor: '#E2E8F0',
+        marginBottom: 14,
+        shadowColor: '#0F172A',
+        shadowOpacity: 0.06,
+        shadowOffset: { width: 0, height: 4 },
+        shadowRadius: 10,
+        elevation: 3,
     },
     postHeader: {
         flexDirection: 'row',
@@ -247,18 +360,20 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
-        marginBottom: 12,
+        marginBottom: 10,
     },
-    avatarImage: { width: 54, height: 54, borderRadius: 27 },
+    avatarImage: { width: 56, height: 56, borderRadius: 28 },
     avatarCircle: {
-        width: 54,
-        height: 54,
-        borderRadius: 27,
-        backgroundColor: Colors.primary,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: '#E2E8F0',
+        borderWidth: 1.5,
+        borderColor: '#CBD5E1',
         justifyContent: 'center',
         alignItems: 'center',
     },
-    avatarInitial: { color: Colors.white, fontWeight: '900', fontSize: 22 },
+    avatarInitial: { color: Colors.primary, fontWeight: '900', fontSize: 22 },
     candidateMainDetails: { flex: 1 },
     candidateName: { fontSize: 17, fontWeight: '900', color: Colors.gray900 },
     amharicName: { fontSize: 12, color: Colors.accentDark, fontWeight: '700', marginTop: 1 },
@@ -274,6 +389,49 @@ const styles = StyleSheet.create({
         marginTop: 4,
     },
     categoryBadgeText: { fontSize: 11, fontWeight: '700', color: Colors.primary },
+
+    /* Photo gallery strip styles */
+    photoSectionContainer: {
+        backgroundColor: Colors.gray50,
+        borderRadius: BorderRadius.lg,
+        padding: 10,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: Colors.gray200,
+    },
+    photoSectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    photoHeaderLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    photoSectionTitle: { fontSize: 12, fontWeight: '800', color: Colors.gray800 },
+    photoCounterBadge: { fontSize: 11, fontWeight: '700', color: Colors.accentDark },
+    photoStripScroll: { gap: 8, paddingRight: 8 },
+    photoThumbnailCard: {
+        width: 90,
+        height: 90,
+        borderRadius: BorderRadius.md,
+        overflow: 'hidden',
+        position: 'relative',
+        borderWidth: 1,
+        borderColor: Colors.gray200,
+        backgroundColor: Colors.white,
+    },
+    photoThumbnailImage: { width: '100%', height: '100%' },
+    photoTypeTagPill: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: 'rgba(15, 23, 42, 0.75)',
+        paddingVertical: 3,
+        paddingHorizontal: 4,
+        alignItems: 'center',
+    },
+    photoTypeTagText: { fontSize: 9, fontWeight: '800', color: Colors.white },
+
     chipsRow: {
         flexDirection: 'row',
         flexWrap: 'wrap',
@@ -353,13 +511,14 @@ const styles = StyleSheet.create({
     secondaryActionBtn: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 4,
+        gap: 6,
         paddingHorizontal: 12,
         paddingVertical: 9,
         borderRadius: BorderRadius.md,
         backgroundColor: Colors.gray100,
+        flex: 1,
     },
-    secondaryActionText: { fontSize: 12, fontWeight: '700', color: Colors.primary },
+    secondaryActionText: { fontSize: 12, fontWeight: '700', color: Colors.primary, flex: 1 },
     primaryActionBtn: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -371,4 +530,74 @@ const styles = StyleSheet.create({
         elevation: 1,
     },
     primaryActionText: { fontSize: 13, fontWeight: '800', color: Colors.white },
+
+    /* Viewer Modal Styles */
+    viewerOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.94)',
+        justifyContent: 'space-between',
+    },
+    viewerHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: Spacing.lg,
+        paddingTop: 48,
+        paddingBottom: 16,
+    },
+    viewerTitleCol: { flex: 1 },
+    viewerCandidateName: { fontSize: 18, fontWeight: '900', color: Colors.white },
+    viewerPhotoLabel: { fontSize: 13, fontWeight: '700', color: Colors.accent, marginTop: 2 },
+    viewerCloseBtn: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    viewerMainDisplay: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        position: 'relative',
+    },
+    viewerMainImage: { width: '92%', height: '80%' },
+    viewerNavArrow: {
+        position: 'absolute',
+        top: '45%',
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    viewerBottomRow: {
+        paddingHorizontal: Spacing.lg,
+        paddingBottom: 36,
+        gap: 14,
+    },
+    viewerThumbScroll: { gap: 10, justifyContent: 'center', flexGrow: 1 },
+    viewerThumbBox: {
+        width: 54,
+        height: 54,
+        borderRadius: 8,
+        overflow: 'hidden',
+        borderWidth: 2,
+        borderColor: 'transparent',
+    },
+    viewerThumbBoxActive: { borderColor: Colors.accent },
+    viewerThumbImg: { width: '100%', height: '100%' },
+    viewerFullProfileBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        backgroundColor: Colors.accent,
+        paddingVertical: 13,
+        borderRadius: BorderRadius.lg,
+    },
+    viewerFullProfileText: { fontSize: 14, fontWeight: '800', color: Colors.white },
 });
+

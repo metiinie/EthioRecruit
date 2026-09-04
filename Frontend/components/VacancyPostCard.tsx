@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius } from '../constants';
+import { AgencyContactBar } from './AgencyContactBar';
 
 interface VacancyPostCardProps {
     vacancy: any;
@@ -141,6 +142,13 @@ export function VacancyPostCard({
                     </View>
                 ) : null}
             </View>
+
+            {/* Direct Agency Contact Shortcuts */}
+            <AgencyContactBar
+                agency={vacancy.agency}
+                vacancyTitle={vacancy.title}
+                compact
+            />
 
             {/* 6. Post Footer Action Bar */}
             <View style={styles.postFooter}>

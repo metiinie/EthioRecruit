@@ -364,6 +364,7 @@ model Candidate {
   passportCopyUrl      String?             @map("passport_copy_url")
   medicalCertUrl       String?             @map("medical_cert_url")
   cocCertUrl           String?             @map("coc_cert_url")
+  galleryPhotos        String[]            @default([]) @map("gallery_photos")
   isFeatured           Boolean             @default(false) @map("is_featured")
   isAvailable          Boolean             @default(true) @map("is_available")
   isPublished          Boolean             @default(true) @map("is_published")

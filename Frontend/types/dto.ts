@@ -78,6 +78,7 @@ export interface CandidateDto {
     passportCopyUrl?: string;
     medicalCertUrl?: string;
     cocCertUrl?: string;
+    galleryPhotos?: string[];
     isFeatured?: boolean;
     isAvailable: boolean;
     isPublished: boolean;

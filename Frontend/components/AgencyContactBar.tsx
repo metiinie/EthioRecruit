@@ -19,8 +19,8 @@ export function AgencyContactBar({ agency, candidateName, vacancyTitle, customMe
     const tgChannel = channels.find((c: any) => c.channelType?.toLowerCase() === 'telegram')?.channelValue;
     const imoChannel = channels.find((c: any) => c.channelType?.toLowerCase() === 'imo')?.channelValue;
 
-    const rawPhone = waChannel || agency?.phone || '+251911000000';
-    const cleanPhone = rawPhone.replace(/[^\d+]/g, '').replace('+', '');
+    const rawPhone = waChannel || agency?.whatsappNumber || agency?.phone || agency?.contactPhone || '+251911000000';
+    const cleanPhone = rawPhone.replace(/[^\d]/g, '');
 
     const defaultMsg = candidateName
         ? `Hello ${agencyName}, I am inquiring about Candidate ${candidateName} via EthioRecruit.`
@@ -31,8 +31,9 @@ export function AgencyContactBar({ agency, candidateName, vacancyTitle, customMe
     const messageText = encodeURIComponent(customMessage || defaultMsg);
 
     const openWhatsApp = () => {
-        const waApp = `whatsapp://send?phone=${cleanPhone}&text=${messageText}`;
-        const waWeb = `https://wa.me/${cleanPhone}?text=${messageText}`;
+        const waPhone = cleanPhone || '251911000000';
+        const waApp = `whatsapp://send?phone=${waPhone}&text=${messageText}`;
+        const waWeb = `https://wa.me/${waPhone}?text=${messageText}`;
         Linking.canOpenURL(waApp).then((supported) => {
             if (supported) Linking.openURL(waApp);
             else Linking.openURL(waWeb);
@@ -40,22 +41,24 @@ export function AgencyContactBar({ agency, candidateName, vacancyTitle, customMe
     };
 
     const openTelegram = () => {
-        let tgHandle = (tgChannel || '').replace('@', '');
-        let tgUrl = tgHandle ? `https://t.me/${tgHandle}` : `https://t.me/${cleanPhone}`;
-        Linking.openURL(tgUrl).catch(() => Alert.alert('Telegram Link', `Agency Telegram: ${tgHandle || cleanPhone}`));
+        let tgHandle = (tgChannel || agency?.telegramUsername || agency?.telegram || 'metinie').replace('@', '').trim();
+        if (!tgHandle) tgHandle = 'metinie';
+        let tgUrl = `https://t.me/${tgHandle}`;
+        Linking.openURL(tgUrl).catch(() => Alert.alert('Telegram Link', `Agency Telegram: @${tgHandle}`));
     };
 
     const openIMO = () => {
-        const imoNum = (imoChannel || rawPhone).replace('+', '');
+        const rawImo = imoChannel || agency?.imoNumber || agency?.imo || rawPhone;
+        const imoNum = rawImo.replace(/[^\d]/g, '');
         const imoUrl = `imo://user?phone=${imoNum}`;
         Linking.canOpenURL(imoUrl).then((supported) => {
             if (supported) Linking.openURL(imoUrl);
             else {
-                Alert.alert('IMO Contact', `Agency IMO Contact: ${imoNum}`);
+                Alert.alert('IMO Contact', `Agency IMO Contact: ${imoNum || rawPhone}`);
                 Linking.openURL(`tel:${imoNum}`).catch(() => { });
             }
         }).catch(() => {
-            Alert.alert('IMO Contact', `Agency IMO Contact: ${imoNum}`);
+            Alert.alert('IMO Contact', `Agency IMO Contact: ${imoNum || rawPhone}`);
         });
     };
 

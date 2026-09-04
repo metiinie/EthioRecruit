@@ -91,9 +91,9 @@ export default function VacancyDetailScreen() {
                 else Linking.openURL(waWeb);
             }).catch(() => Linking.openURL(waWeb));
         } else if (channel === 'TELEGRAM') {
-            const tgUsername = vacancy?.agency?.telegramUsername || cleanPhone;
-            const tgUrl = `https://t.me/${tgUsername.replace('@', '')}`;
-            Linking.openURL(tgUrl).catch(() => Alert.alert('Telegram', `Agency Telegram: ${tgUsername}`));
+            const tgUsername = (vacancy?.agency?.telegramUsername || vacancy?.agency?.telegram || 'metinie').replace('@', '').trim() || 'metinie';
+            const tgUrl = `https://t.me/${tgUsername}`;
+            Linking.openURL(tgUrl).catch(() => Alert.alert('Telegram', `Agency Telegram: @${tgUsername}`));
         } else if (channel === 'IMO') {
             const imoPhone = vacancy?.agency?.imoNumber || agencyPhone;
             const imoUrl = `imo://user?phone=${imoPhone.replace('+', '')}`;

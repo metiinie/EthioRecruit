@@ -244,6 +244,11 @@ export class CreateCandidateDto {
     @IsArray()
     @IsString({ each: true })
     @IsOptional()
+    galleryPhotos?: string[] = [];
+
+    @IsArray()
+    @IsString({ each: true })
+    @IsOptional()
     skills?: string[] = [];
 
     @IsArray()

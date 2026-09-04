@@ -153,12 +153,26 @@ export default function NewCandidateWizardScreen() {
         passportCopyUrl: '',
         medicalCertUrl: '',
         cocCertUrl: '',
+        galleryPhotos: [] as string[],
+        fullBodyPhotos: ['', '', '', '', ''] as string[],
         summary: '',
         isPublished: true,
     });
 
     const updateForm = (key: string, value: any) => {
         setFormData((prev) => ({ ...prev, [key]: value }));
+    };
+
+    const updateFullBodyPhoto = (index: number, url: string) => {
+        setFormData((prev) => {
+            const nextList = [...(prev.fullBodyPhotos || ['', '', '', '', ''])];
+            nextList[index] = url;
+            return {
+                ...prev,
+                fullBodyPhotos: nextList,
+                fullBodyPhotoUrl: nextList[0] || prev.fullBodyPhotoUrl,
+            };
+        });
     };
 
     // Media Picker Function (Gallery or Camera)
@@ -188,6 +202,38 @@ export default function NewCandidateWizardScreen() {
             if (!result.canceled && result.assets && result.assets.length > 0) {
                 const pickedUri = result.assets[0].uri;
                 updateForm(fieldKey, pickedUri);
+            }
+        } catch (err: any) {
+            Alert.alert('Media Error', err.message || 'Failed to select media');
+        }
+    };
+
+    const pickFullBodyMedia = async (index: number, source: 'gallery' | 'camera') => {
+        try {
+            const permissionResult =
+                source === 'camera'
+                    ? await ImagePicker.requestCameraPermissionsAsync()
+                    : await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+            if (!permissionResult.granted) {
+                Alert.alert('Permission Denied', 'Camera/Gallery access is required.');
+                return;
+            }
+
+            const result =
+                source === 'camera'
+                    ? await ImagePicker.launchCameraAsync({
+                        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                        quality: 0.8,
+                    })
+                    : await ImagePicker.launchImageLibraryAsync({
+                        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                        quality: 0.8,
+                    });
+
+            if (!result.canceled && result.assets && result.assets.length > 0) {
+                const pickedUri = result.assets[0].uri;
+                updateFullBodyPhoto(index, pickedUri);
             }
         } catch (err: any) {
             Alert.alert('Media Error', err.message || 'Failed to select media');
@@ -277,11 +323,20 @@ export default function NewCandidateWizardScreen() {
                 contractPeriodYears: parseNum(formData.contractPeriodYears) ?? 2,
                 summary: formData.summary || undefined,
                 photoUrl: formData.photoUrl || undefined,
-                fullBodyPhotoUrl: formData.fullBodyPhotoUrl || undefined,
+                fullBodyPhotoUrl: (formData.fullBodyPhotos || []).find((u) => u.trim().length > 0) || formData.fullBodyPhotoUrl || undefined,
                 videoUrl: formData.videoUrl || undefined,
                 passportCopyUrl: formData.passportCopyUrl || undefined,
                 medicalCertUrl: formData.medicalCertUrl || undefined,
                 cocCertUrl: formData.cocCertUrl || undefined,
+                galleryPhotos: Array.from(new Set([
+                    formData.photoUrl,
+                    formData.fullBodyPhotoUrl,
+                    ...(formData.fullBodyPhotos || []),
+                    formData.passportCopyUrl,
+                    formData.medicalCertUrl,
+                    formData.cocCertUrl,
+                    ...(Array.isArray((formData as any).galleryPhotos) ? (formData as any).galleryPhotos : [])
+                ].filter((u): u is string => typeof u === 'string' && u.trim().length > 0))),
                 isPublished: formData.isPublished,
             };
 
@@ -867,41 +922,54 @@ export default function NewCandidateWizardScreen() {
                         onChangeText={(val) => updateForm('photoUrl', val)}
                     />
 
-                    {/* Full Body Photo Picker */}
-                    <Text style={styles.label}>Full-Body Standing Photo (Gulf Employer Requirement)</Text>
-                    {formData.fullBodyPhotoUrl ? (
-                        <View style={styles.mediaPreviewBox}>
-                            <Image source={{ uri: formData.fullBodyPhotoUrl }} style={styles.previewThumb} />
-                            <Text style={styles.previewUriText} numberOfLines={1}>
-                                {formData.fullBodyPhotoUrl}
-                            </Text>
-                            <TouchableOpacity onPress={() => updateForm('fullBodyPhotoUrl', '')}>
-                                <Ionicons name="close-circle" size={22} color="#E53E3E" />
-                            </TouchableOpacity>
-                        </View>
-                    ) : null}
-                    <View style={styles.pickerBtnRow}>
-                        <TouchableOpacity
-                            style={styles.pickerBtn}
-                            onPress={() => pickMedia('fullBodyPhotoUrl', 'image', 'gallery')}
-                        >
-                            <Ionicons name="images-outline" size={16} color="#1A365D" />
-                            <Text style={styles.pickerBtnText}>Gallery</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={styles.pickerBtn}
-                            onPress={() => pickMedia('fullBodyPhotoUrl', 'image', 'camera')}
-                        >
-                            <Ionicons name="camera-outline" size={16} color="#1A365D" />
-                            <Text style={styles.pickerBtnText}>Camera</Text>
-                        </TouchableOpacity>
-                    </View>
-                    <TextInput
-                        style={[styles.input, { marginTop: 6 }]}
-                        placeholder="Or enter full-body image URL"
-                        value={formData.fullBodyPhotoUrl}
-                        onChangeText={(val) => updateForm('fullBodyPhotoUrl', val)}
-                    />
+                    {/* Up to 5 Full Body Standing Photos */}
+                    <Text style={[styles.sectionHeader, { marginTop: 16 }]}>
+                        Full-Body Standing Photos (Up to 5 Photos - Gulf Requirement)
+                    </Text>
+
+                    {[0, 1, 2, 3, 4].map((idx) => {
+                        const currentUri = (formData.fullBodyPhotos && formData.fullBodyPhotos[idx]) || '';
+                        return (
+                            <View key={`fullbody-slot-${idx}`} style={{ marginBottom: 14, backgroundColor: '#F7FAFC', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                                <Text style={[styles.label, { color: '#2D3748', fontWeight: '700' }]}>
+                                    Full-Body Standing Photo #{idx + 1} {idx === 0 ? '(Primary)' : '(Optional)'}
+                                </Text>
+                                {currentUri ? (
+                                    <View style={styles.mediaPreviewBox}>
+                                        <Image source={{ uri: currentUri }} style={styles.previewThumb} />
+                                        <Text style={styles.previewUriText} numberOfLines={1}>
+                                            {currentUri}
+                                        </Text>
+                                        <TouchableOpacity onPress={() => updateFullBodyPhoto(idx, '')}>
+                                            <Ionicons name="close-circle" size={22} color="#E53E3E" />
+                                        </TouchableOpacity>
+                                    </View>
+                                ) : null}
+                                <View style={styles.pickerBtnRow}>
+                                    <TouchableOpacity
+                                        style={styles.pickerBtn}
+                                        onPress={() => pickFullBodyMedia(idx, 'gallery')}
+                                    >
+                                        <Ionicons name="images-outline" size={16} color="#1A365D" />
+                                        <Text style={styles.pickerBtnText}>Gallery</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={styles.pickerBtn}
+                                        onPress={() => pickFullBodyMedia(idx, 'camera')}
+                                    >
+                                        <Ionicons name="camera-outline" size={16} color="#1A365D" />
+                                        <Text style={styles.pickerBtnText}>Camera</Text>
+                                    </TouchableOpacity>
+                                </View>
+                                <TextInput
+                                    style={[styles.input, { marginTop: 6 }]}
+                                    placeholder={`Or enter full-body photo #${idx + 1} URL (https://...)`}
+                                    value={currentUri}
+                                    onChangeText={(val) => updateFullBodyPhoto(idx, val)}
+                                />
+                            </View>
+                        );
+                    })}
 
                     {/* Intro Video Picker */}
                     <Text style={styles.label}>Candidate Introduction Video</Text>
@@ -1044,6 +1112,15 @@ export default function NewCandidateWizardScreen() {
                         value={formData.cocCertUrl}
                         onChangeText={(val) => updateForm('cocCertUrl', val)}
                     />
+
+                    <View style={{ backgroundColor: '#EBF8FF', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#BEE3F8', marginVertical: 10 }}>
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#2B6CB0', marginBottom: 2 }}>
+                            📸 5-Photo Gallery Support Active
+                        </Text>
+                        <Text style={{ fontSize: 11, color: '#2C5282' }}>
+                            All 5 attached media items above (Headshot, Full-Body, Passport, Medical & COC) are saved directly into the candidate's <Text style={{ fontWeight: '700' }}>galleryPhotos</Text> backend array column.
+                        </Text>
+                    </View>
 
                     <View style={styles.switchRow}>
                         <View style={{ flex: 1 }}>

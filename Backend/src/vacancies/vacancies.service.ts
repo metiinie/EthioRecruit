@@ -15,7 +15,11 @@ export class VacanciesService {
     private async evictVacancyCache() {
         try {
             const mgr = this.cacheManager as any;
-            if (typeof mgr.reset === 'function') {
+            if (typeof mgr.clear === 'function') {
+                await mgr.clear();
+            } else if (mgr.store && typeof mgr.store.clear === 'function') {
+                await mgr.store.clear();
+            } else if (typeof mgr.reset === 'function') {
                 await mgr.reset();
             } else if (mgr.store && typeof mgr.store.reset === 'function') {
                 await mgr.store.reset();
@@ -49,7 +53,7 @@ export class VacanciesService {
                 const resolvedId = await this.resolveCategoryId(categoryId);
                 where.categoryId = resolvedId;
             } catch (e) {
-                where.categoryId = categoryId;
+                // Ignore category filter error if invalid category
             }
         }
         if (country) where.country = country;
@@ -79,13 +83,20 @@ export class VacanciesService {
 
         const result = {
             data,
-            meta: { page, perPage: effectivePerPage, total, totalPages },
+            meta: {
+                page,
+                perPage: effectivePerPage,
+                total,
+                totalPages,
+                nextPage: page < totalPages ? page + 1 : null,
+                prevPage: page > 1 ? page - 1 : null,
+            },
         };
 
         try {
             await this.cacheManager.set(cacheKey, result, 120000);
         } catch (e) {
-            // Ignore cache set error
+            // Ignore cache save error
         }
 
         return result;
@@ -103,15 +114,16 @@ export class VacanciesService {
                         logoUrl: true,
                         phone: true,
                         email: true,
+                        city: true,
+                        country: true,
                         isVerified: true,
-                        settings: true,
                     },
                 },
             },
         });
 
         if (!vacancy || vacancy.status !== VacancyStatus.ACTIVE) {
-            throw new NotFoundException('Job vacancy not found or inactive');
+            throw new NotFoundException('Vacancy not found or not active');
         }
 
         return { data: vacancy };

@@ -31,8 +31,8 @@ export function ContactAgencyModal({
 
     const agencyName = agency?.name || 'Recruitment Agency';
     const rawPhone = agency?.whatsappNumber || agency?.phone || agency?.contactPhone || '+251911000000';
-    const cleanPhone = rawPhone.replace(/[^\d]/g, '');
-    const tgUsername = (agency?.telegramUsername || agency?.telegram || cleanPhone).replace('@', '');
+    const cleanPhone = rawPhone.replace(/[^\d]/g, '') || '251911000000';
+    const tgUsername = (agency?.telegramUsername || agency?.telegram || 'metinie').replace('@', '').trim() || 'metinie';
     const imoPhone = agency?.imoNumber || agency?.imo || rawPhone;
 
     const topicContext = topicName ? ` regarding "${topicName}"` : '';

@@ -14,6 +14,8 @@ const categories = [
     { name: 'Gardener', description: 'Garden and landscape maintenance' },
     { name: 'Laundry Worker', description: 'Laundry and ironing services' },
     { name: 'Cleaner', description: 'Deep cleaning and sanitation' },
+    { name: 'Hospitality', description: 'Hospitality, hotel, and restaurant staff' },
+    { name: 'General Worker', description: 'General labor and facility assistance' },
 ];
 
 async function main() {
@@ -59,6 +61,35 @@ async function main() {
     } else {
         console.log('ℹ️ Organization already exists:', organization.name);
     }
+
+    // Seed default contact channels for organization (Telegram @metinie, WhatsApp, IMO)
+    const defaultChannels = [
+        { channelType: 'TELEGRAM', channelValue: 'metinie', label: 'Telegram Direct' },
+        { channelType: 'WHATSAPP', channelValue: adminPhone, label: 'WhatsApp Official' },
+        { channelType: 'IMO', channelValue: adminPhone, label: 'IMO Hotline' },
+    ];
+    for (const chan of defaultChannels) {
+        const existingChan = await prisma.agencyContactChannel.findFirst({
+            where: { agencyId: organization.id, channelType: chan.channelType },
+        });
+        if (!existingChan) {
+            await prisma.agencyContactChannel.create({
+                data: {
+                    agencyId: organization.id,
+                    channelType: chan.channelType,
+                    channelValue: chan.channelValue,
+                    label: chan.label,
+                    isPrimary: true,
+                },
+            });
+        } else {
+            await prisma.agencyContactChannel.update({
+                where: { id: existingChan.id },
+                data: { channelValue: chan.channelValue },
+            });
+        }
+    }
+    console.log('✅ Seeded default contact channels (Telegram @metinie, WhatsApp, IMO).');
 
     // 3. Seed AdminUser Ibrahim (Admin Dashboard Only)
     // First remove any conflicting regular User record created for admin phone/email

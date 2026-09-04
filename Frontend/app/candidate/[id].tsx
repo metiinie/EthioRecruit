@@ -18,8 +18,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius } from '../../constants';
 import { candidateService } from '../../services/candidateService';
 import { savedService } from '../../services/savedService';
-import { getValidImageUri } from '../../utils/imageUtils';
+import { getValidImageUri, getBestCandidateAvatar } from '../../utils/imageUtils';
 import { AgencyContactBar } from '../../components/AgencyContactBar';
+import { getCandidatePhotos } from '../../components/CandidatePostCard';
 
 export default function CandidateDetailScreen() {
     const { id } = useLocalSearchParams<{ id: string }>();
@@ -33,6 +34,8 @@ export default function CandidateDetailScreen() {
     const [inquiryMessage, setInquiryMessage] = useState('');
     const [submittingInquiry, setSubmittingInquiry] = useState(false);
     const [exportingCv, setExportingCv] = useState(false);
+    const [photoViewerVisible, setPhotoViewerVisible] = useState(false);
+    const [activePhotoIdx, setActivePhotoIdx] = useState(0);
 
     const handleExportCv = async () => {
         if (!id) return;
@@ -217,8 +220,8 @@ export default function CandidateDetailScreen() {
             >
                 {/* Main Profile Header Card */}
                 <View style={styles.profileHeaderCard}>
-                    {getValidImageUri(candidate.photoUrl) ? (
-                        <Image source={{ uri: getValidImageUri(candidate.photoUrl)! }} style={styles.avatarImage} />
+                    {getBestCandidateAvatar(candidate) ? (
+                        <Image source={{ uri: getBestCandidateAvatar(candidate)! }} style={styles.avatarImage} />
                     ) : (
                         <View style={styles.avatarCircle}>
                             <Text style={styles.avatarText}>
@@ -271,6 +274,111 @@ export default function CandidateDetailScreen() {
                         </View>
                     </View>
                 </View>
+
+                {/* Candidate 5-Photo Gallery Section */}
+                {(() => {
+                    const photos = getCandidatePhotos(candidate);
+                    if (photos.length === 0) return null;
+                    const currentPhoto = photos[activePhotoIdx] || photos[0];
+
+                    return (
+                        <View style={styles.sectionCard}>
+                            <View style={styles.sectionHeaderRowBetween}>
+                                <View style={styles.sectionHeaderRow}>
+                                    <Ionicons name="images-outline" size={18} color={Colors.accent} />
+                                    <Text style={styles.sectionTitle}>Candidate Photos ({photos.length}/5)</Text>
+                                </View>
+                                <Text style={styles.tapToExpandText}>Tap photo to enlarge</Text>
+                            </View>
+
+                            <ScrollView
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                contentContainerStyle={styles.galleryScrollContainer}
+                            >
+                                {photos.map((photo, idx) => (
+                                    <TouchableOpacity
+                                        key={`detail-photo-${photo.id}-${idx}`}
+                                        style={styles.galleryCard}
+                                        onPress={() => {
+                                            setActivePhotoIdx(idx);
+                                            setPhotoViewerVisible(true);
+                                        }}
+                                        activeOpacity={0.88}
+                                    >
+                                        <Image source={{ uri: photo.url }} style={styles.galleryCardImg} />
+                                        <View style={styles.galleryCardBadge}>
+                                            <Ionicons name={photo.icon as any} size={11} color={Colors.white} />
+                                            <Text style={styles.galleryCardBadgeText}>{photo.label}</Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+
+                            {/* Detailed Full Screen Viewer Modal */}
+                            {photoViewerVisible && (
+                                <Modal visible transparent animationType="fade" onRequestClose={() => setPhotoViewerVisible(false)}>
+                                    <View style={styles.viewerOverlay}>
+                                        <View style={styles.viewerHeader}>
+                                            <View style={styles.viewerTitleCol}>
+                                                <Text style={styles.viewerCandidateName}>
+                                                    {candidate.firstName} {candidate.lastName}
+                                                </Text>
+                                                <Text style={styles.viewerPhotoLabel}>
+                                                    {currentPhoto.label} ({activePhotoIdx + 1} of {photos.length})
+                                                </Text>
+                                            </View>
+
+                                            <TouchableOpacity style={styles.viewerCloseBtn} onPress={() => setPhotoViewerVisible(false)}>
+                                                <Ionicons name="close" size={24} color={Colors.white} />
+                                            </TouchableOpacity>
+                                        </View>
+
+                                        <View style={styles.viewerMainDisplay}>
+                                            <Image
+                                                source={{ uri: currentPhoto.url }}
+                                                style={styles.viewerMainImage}
+                                                resizeMode="contain"
+                                            />
+
+                                            {photos.length > 1 && (
+                                                <>
+                                                    <TouchableOpacity
+                                                        style={[styles.viewerNavArrow, { left: 16 }]}
+                                                        onPress={() => setActivePhotoIdx((prev) => (prev > 0 ? prev - 1 : photos.length - 1))}
+                                                    >
+                                                        <Ionicons name="chevron-back" size={28} color={Colors.white} />
+                                                    </TouchableOpacity>
+
+                                                    <TouchableOpacity
+                                                        style={[styles.viewerNavArrow, { right: 16 }]}
+                                                        onPress={() => setActivePhotoIdx((prev) => (prev < photos.length - 1 ? prev + 1 : 0))}
+                                                    >
+                                                        <Ionicons name="chevron-forward" size={28} color={Colors.white} />
+                                                    </TouchableOpacity>
+                                                </>
+                                            )}
+                                        </View>
+
+                                        <View style={styles.viewerBottomRow}>
+                                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.viewerThumbScroll}>
+                                                {photos.map((p, idx) => (
+                                                    <TouchableOpacity
+                                                        key={`detail-vthumb-${p.id}-${idx}`}
+                                                        style={[styles.viewerThumbBox, activePhotoIdx === idx && styles.viewerThumbBoxActive]}
+                                                        onPress={() => setActivePhotoIdx(idx)}
+                                                    >
+                                                        <Image source={{ uri: p.url }} style={styles.viewerThumbImg} />
+                                                    </TouchableOpacity>
+                                                ))}
+                                            </ScrollView>
+                                        </View>
+                                    </View>
+                                </Modal>
+                            )}
+                        </View>
+                    );
+                })()}
 
                 {/* Comprehensive Employer Data Matrix */}
                 <View style={styles.sectionCard}>
@@ -378,6 +486,12 @@ export default function CandidateDetailScreen() {
                         <Text style={styles.agencySub}>Licensed Foreign Employment Agency</Text>
                     </View>
                 </View>
+
+                {/* Direct Agency Outreach Shortcuts */}
+                <AgencyContactBar
+                    agency={candidate.agency}
+                    candidateName={`${candidate.firstName} ${candidate.lastName}`}
+                />
             </ScrollView>
 
             {/* Fixed Bottom Action Bar */}
@@ -735,4 +849,112 @@ const styles = StyleSheet.create({
     },
     modalSubmitBtn: { backgroundColor: Colors.accent, paddingVertical: 14, borderRadius: BorderRadius.md, alignItems: 'center' },
     modalSubmitText: { color: Colors.white, fontWeight: '700', fontSize: 15 },
+
+    /* Candidate 5-Photo Gallery Styles */
+    sectionHeaderRowBetween: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    tapToExpandText: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: Colors.accentDark,
+    },
+    galleryScrollContainer: {
+        gap: 10,
+        paddingRight: 8,
+    },
+    galleryCard: {
+        width: 120,
+        height: 120,
+        borderRadius: BorderRadius.lg,
+        overflow: 'hidden',
+        position: 'relative',
+        borderWidth: 1,
+        borderColor: Colors.gray200,
+        backgroundColor: Colors.gray100,
+    },
+    galleryCardImg: {
+        width: '100%',
+        height: '100%',
+    },
+    galleryCardBadge: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: 'rgba(15, 23, 42, 0.78)',
+        paddingVertical: 4,
+        paddingHorizontal: 6,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 4,
+    },
+    galleryCardBadgeText: {
+        color: Colors.white,
+        fontSize: 10,
+        fontWeight: '800',
+    },
+
+    /* Viewer Overlay Styles */
+    viewerOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.94)',
+        justifyContent: 'space-between',
+    },
+    viewerHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: Spacing.lg,
+        paddingTop: 48,
+        paddingBottom: 16,
+    },
+    viewerTitleCol: { flex: 1 },
+    viewerCandidateName: { fontSize: 18, fontWeight: '900', color: Colors.white },
+    viewerPhotoLabel: { fontSize: 13, fontWeight: '700', color: Colors.accent, marginTop: 2 },
+    viewerCloseBtn: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    viewerMainDisplay: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        position: 'relative',
+    },
+    viewerMainImage: { width: '92%', height: '80%' },
+    viewerNavArrow: {
+        position: 'absolute',
+        top: '45%',
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    viewerBottomRow: {
+        paddingHorizontal: Spacing.lg,
+        paddingBottom: 36,
+        gap: 14,
+    },
+    viewerThumbScroll: { gap: 10, justifyContent: 'center', flexGrow: 1 },
+    viewerThumbBox: {
+        width: 54,
+        height: 54,
+        borderRadius: 8,
+        overflow: 'hidden',
+        borderWidth: 2,
+        borderColor: 'transparent',
+    },
+    viewerThumbBoxActive: { borderColor: Colors.accent },
+    viewerThumbImg: { width: '100%', height: '100%' },
 });

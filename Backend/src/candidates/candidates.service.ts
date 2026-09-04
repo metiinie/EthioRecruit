@@ -14,7 +14,11 @@ export class CandidatesService {
     private async evictCandidateCache() {
         try {
             const mgr = this.cacheManager as any;
-            if (typeof mgr.reset === 'function') {
+            if (typeof mgr.clear === 'function') {
+                await mgr.clear();
+            } else if (mgr.store && typeof mgr.store.clear === 'function') {
+                await mgr.store.clear();
+            } else if (typeof mgr.reset === 'function') {
                 await mgr.reset();
             } else if (mgr.store && typeof mgr.store.reset === 'function') {
                 await mgr.store.reset();
@@ -41,7 +45,13 @@ export class CandidatesService {
             if (existingCategory) {
                 return existingCategory.id;
             }
-            throw new NotFoundException(`Category '${categoryId}' not found`);
+            // Fallback to housemaid or first available category if requested slug not found
+            const fallbackCategory = await this.prisma.category.findFirst({
+                where: { name: { contains: 'housemaid', mode: 'insensitive' } },
+            }) || await this.prisma.category.findFirst();
+            if (fallbackCategory) {
+                return fallbackCategory.id;
+            }
         }
 
         // Fallback to existing default category or throw NotFoundException
@@ -70,9 +80,6 @@ export class CandidatesService {
             emergencyContactPhone,
             emergencyContactName,
             emergencyContactRelation,
-            passportCopyUrl,
-            medicalCertUrl,
-            cocCertUrl,
             phone,
             ...safeData
         } = candidate;
