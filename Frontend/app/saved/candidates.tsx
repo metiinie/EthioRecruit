@@ -89,21 +89,12 @@ export default function SavedCandidatesScreen() {
                                     <Text style={styles.subText}>{candidate?.currentCountry || 'Ethiopia'} • {candidate?.experienceYears ? `${candidate.experienceYears} yrs exp` : 'Fresh'}</Text>
                                 </View>
 
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                    <ContactUsButton
-                                        agency={candidate?.agency}
-                                        topicName={`${candidate?.firstName || ''} ${candidate?.lastName || ''}`}
-                                        label="Contact Us"
-                                        compact
-                                    />
-
-                                    <TouchableOpacity
-                                        onPress={() => handleUnsave(candidate.id)}
-                                        style={{ padding: 6 }}
-                                    >
-                                        <Ionicons name="trash-outline" size={18} color="#E53E3E" />
-                                    </TouchableOpacity>
-                                </View>
+                                <TouchableOpacity
+                                    onPress={() => handleUnsave(candidate.id)}
+                                    style={{ padding: 8 }}
+                                >
+                                    <Ionicons name="trash-outline" size={20} color="#E53E3E" />
+                                </TouchableOpacity>
                             </TouchableOpacity>
                         );
                     }}

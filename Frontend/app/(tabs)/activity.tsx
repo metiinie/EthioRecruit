@@ -211,41 +211,45 @@ export default function ActivityScreen() {
                                     Applied on: {new Date(app.createdAt).toLocaleDateString()}
                                 </Text>
 
-                                {/* Direct Agency Contact Bar & Contact Us Modal Button */}
-                                {app.vacancy?.agency && (
-                                    <View style={styles.inquiryContactRow}>
-                                        <Text style={styles.contactLabel}>Contact Agency:</Text>
-                                        <ContactUsButton
-                                            agency={app.vacancy.agency}
-                                            topicName={app.vacancy.title}
-                                            label="Contact Us"
-                                            compact
-                                        />
-                                        <TouchableOpacity
-                                            style={[styles.miniOutreachBtn, { backgroundColor: '#DCFCE7', borderColor: '#86EFAC' }]}
-                                            onPress={() => launchAgencyOutreach('WHATSAPP', app.vacancy.agency, app.vacancy.title)}
-                                        >
-                                            <Ionicons name="logo-whatsapp" size={12} color="#16A34A" />
-                                            <Text style={[styles.miniOutreachBtnText, { color: '#15803D' }]}>WhatsApp</Text>
-                                        </TouchableOpacity>
+                                {/* Direct Agency Contact Bar */}
+                                {(() => {
+                                    const agencyObj = app.vacancy?.agency || {
+                                        name: 'Recruitment Agency',
+                                        phone: '+251918982161',
+                                        whatsappNumber: '+251918982161',
+                                        telegramUsername: 'metinie',
+                                        imoNumber: '+251918982161',
+                                        isVerified: true,
+                                    };
+                                    return (
+                                        <View style={styles.inquiryContactRow}>
+                                            <Text style={styles.contactLabel}>Contact Agency:</Text>
+                                            <TouchableOpacity
+                                                style={[styles.miniOutreachBtn, { backgroundColor: '#DCFCE7', borderColor: '#86EFAC' }]}
+                                                onPress={() => launchAgencyOutreach('WHATSAPP', agencyObj, app.vacancy?.title)}
+                                            >
+                                                <Ionicons name="logo-whatsapp" size={13} color="#16A34A" />
+                                                <Text style={[styles.miniOutreachBtnText, { color: '#15803D' }]}>WhatsApp</Text>
+                                            </TouchableOpacity>
 
-                                        <TouchableOpacity
-                                            style={[styles.miniOutreachBtn, { backgroundColor: '#E0F2FE', borderColor: '#7DD3FC' }]}
-                                            onPress={() => launchAgencyOutreach('TELEGRAM', app.vacancy.agency, app.vacancy.title)}
-                                        >
-                                            <Ionicons name="paper-plane-outline" size={12} color="#0284C7" />
-                                            <Text style={[styles.miniOutreachBtnText, { color: '#0369A1' }]}>Telegram</Text>
-                                        </TouchableOpacity>
+                                            <TouchableOpacity
+                                                style={[styles.miniOutreachBtn, { backgroundColor: '#E0F2FE', borderColor: '#7DD3FC' }]}
+                                                onPress={() => launchAgencyOutreach('TELEGRAM', agencyObj, app.vacancy?.title)}
+                                            >
+                                                <Ionicons name="paper-plane" size={13} color="#0284C7" />
+                                                <Text style={[styles.miniOutreachBtnText, { color: '#0369A1' }]}>Telegram</Text>
+                                            </TouchableOpacity>
 
-                                        <TouchableOpacity
-                                            style={[styles.miniOutreachBtn, { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' }]}
-                                            onPress={() => launchAgencyOutreach('IMO', app.vacancy.agency, app.vacancy.title)}
-                                        >
-                                            <Ionicons name="call-outline" size={12} color="#D97706" />
-                                            <Text style={[styles.miniOutreachBtnText, { color: '#B45309' }]}>IMO</Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                )}
+                                            <TouchableOpacity
+                                                style={[styles.miniOutreachBtn, { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' }]}
+                                                onPress={() => launchAgencyOutreach('IMO', agencyObj, app.vacancy?.title)}
+                                            >
+                                                <Ionicons name="call" size={13} color="#D97706" />
+                                                <Text style={[styles.miniOutreachBtnText, { color: '#B45309' }]}>IMO</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    );
+                                })()}
                             </View>
                         ))
                     )}
@@ -376,40 +380,44 @@ export default function ActivityScreen() {
                                     </View>
 
                                     {/* Direct Agency Social / Messaging Contact Bar */}
-                                    {cand?.agency && (
-                                        <View style={styles.inquiryContactRow}>
-                                            <Text style={styles.contactLabel}>Direct Agency Contact:</Text>
-                                            <ContactUsButton
-                                                agency={cand.agency}
-                                                topicName={cand ? `${cand.firstName} ${cand.lastName}` : 'Candidate Inquiry'}
-                                                label="Contact Us"
-                                                compact
-                                            />
-                                            <TouchableOpacity
-                                                style={[styles.miniOutreachBtn, { backgroundColor: '#DCFCE7', borderColor: '#86EFAC' }]}
-                                                onPress={() => launchAgencyOutreach('WHATSAPP', cand.agency, cand ? `${cand.firstName} ${cand.lastName}` : 'Candidate')}
-                                            >
-                                                <Ionicons name="logo-whatsapp" size={12} color="#16A34A" />
-                                                <Text style={[styles.miniOutreachBtnText, { color: '#15803D' }]}>WhatsApp</Text>
-                                            </TouchableOpacity>
+                                    {(() => {
+                                        const agencyObj = cand?.agency || {
+                                            name: 'Recruitment Agency',
+                                            phone: '+251918982161',
+                                            whatsappNumber: '+251918982161',
+                                            telegramUsername: 'metinie',
+                                            imoNumber: '+251918982161',
+                                            isVerified: true,
+                                        };
+                                        return (
+                                            <View style={styles.inquiryContactRow}>
+                                                <Text style={styles.contactLabel}>Direct Agency Contact:</Text>
+                                                <TouchableOpacity
+                                                    style={[styles.miniOutreachBtn, { backgroundColor: '#DCFCE7', borderColor: '#86EFAC' }]}
+                                                    onPress={() => launchAgencyOutreach('WHATSAPP', agencyObj, cand ? `${cand.firstName} ${cand.lastName}` : 'Candidate')}
+                                                >
+                                                    <Ionicons name="logo-whatsapp" size={12} color="#16A34A" />
+                                                    <Text style={[styles.miniOutreachBtnText, { color: '#15803D' }]}>WhatsApp</Text>
+                                                </TouchableOpacity>
 
-                                            <TouchableOpacity
-                                                style={[styles.miniOutreachBtn, { backgroundColor: '#E0F2FE', borderColor: '#7DD3FC' }]}
-                                                onPress={() => launchAgencyOutreach('TELEGRAM', cand.agency, cand ? `${cand.firstName} ${cand.lastName}` : 'Candidate')}
-                                            >
-                                                <Ionicons name="paper-plane-outline" size={12} color="#0284C7" />
-                                                <Text style={[styles.miniOutreachBtnText, { color: '#0369A1' }]}>Telegram</Text>
-                                            </TouchableOpacity>
+                                                <TouchableOpacity
+                                                    style={[styles.miniOutreachBtn, { backgroundColor: '#E0F2FE', borderColor: '#7DD3FC' }]}
+                                                    onPress={() => launchAgencyOutreach('TELEGRAM', agencyObj, cand ? `${cand.firstName} ${cand.lastName}` : 'Candidate')}
+                                                >
+                                                    <Ionicons name="paper-plane-outline" size={12} color="#0284C7" />
+                                                    <Text style={[styles.miniOutreachBtnText, { color: '#0369A1' }]}>Telegram</Text>
+                                                </TouchableOpacity>
 
-                                            <TouchableOpacity
-                                                style={[styles.miniOutreachBtn, { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' }]}
-                                                onPress={() => launchAgencyOutreach('IMO', cand.agency, cand ? `${cand.firstName} ${cand.lastName}` : 'Candidate')}
-                                            >
-                                                <Ionicons name="call-outline" size={12} color="#D97706" />
-                                                <Text style={[styles.miniOutreachBtnText, { color: '#B45309' }]}>IMO</Text>
-                                            </TouchableOpacity>
-                                        </View>
-                                    )}
+                                                <TouchableOpacity
+                                                    style={[styles.miniOutreachBtn, { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' }]}
+                                                    onPress={() => launchAgencyOutreach('IMO', agencyObj, cand ? `${cand.firstName} ${cand.lastName}` : 'Candidate')}
+                                                >
+                                                    <Ionicons name="call-outline" size={12} color="#D97706" />
+                                                    <Text style={[styles.miniOutreachBtnText, { color: '#B45309' }]}>IMO</Text>
+                                                </TouchableOpacity>
+                                            </View>
+                                        );
+                                    })()}
 
                                     {/* Action Bar Footer */}
                                     <View style={styles.cardFooter}>

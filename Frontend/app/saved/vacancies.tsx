@@ -81,21 +81,12 @@ export default function SavedVacanciesScreen() {
                                     <Text style={styles.subText}>{vacancy?.country || 'Saudi Arabia'} • {vacancy?.agency?.name || 'Agency'}</Text>
                                 </View>
 
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                    <ContactUsButton
-                                        agency={vacancy?.agency}
-                                        topicName={vacancy?.title}
-                                        label="Contact Us"
-                                        compact
-                                    />
-
-                                    <TouchableOpacity
-                                        onPress={() => handleUnsave(vacancy.id)}
-                                        style={{ padding: 6 }}
-                                    >
-                                        <Ionicons name="trash-outline" size={18} color="#E53E3E" />
-                                    </TouchableOpacity>
-                                </View>
+                                <TouchableOpacity
+                                    onPress={() => handleUnsave(vacancy.id)}
+                                    style={{ padding: 8 }}
+                                >
+                                    <Ionicons name="trash-outline" size={20} color="#E53E3E" />
+                                </TouchableOpacity>
                             </TouchableOpacity>
                         );
                     }}

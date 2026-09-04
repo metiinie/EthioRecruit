@@ -12,12 +12,52 @@ export class InquiriesService {
             where: { userId },
             include: {
                 candidate: {
-                    select: { id: true, firstName: true, lastName: true, photoUrl: true, category: true },
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        photoUrl: true,
+                        category: true,
+                        agency: {
+                            select: {
+                                id: true,
+                                name: true,
+                                logoUrl: true,
+                                phone: true,
+                                isVerified: true,
+                                contactChannels: true,
+                            },
+                        },
+                    },
                 },
             },
             orderBy: { createdAt: 'desc' },
         });
-        return { data: inquiries };
+
+        const data = inquiries.map((inq) => {
+            const agency = inq.candidate?.agency as any;
+            if (!agency) return inq;
+
+            const channels: any[] = agency.contactChannels || [];
+            const wa = channels.find((c) => c.channelType?.toLowerCase() === 'whatsapp')?.channelValue;
+            const tg = channels.find((c) => c.channelType?.toLowerCase() === 'telegram')?.channelValue;
+            const imo = channels.find((c) => c.channelType?.toLowerCase() === 'imo')?.channelValue;
+
+            return {
+                ...inq,
+                candidate: {
+                    ...inq.candidate,
+                    agency: {
+                        ...agency,
+                        whatsappNumber: wa || agency.phone || '+251911000000',
+                        telegramUsername: tg || agency.phone || 'EthioRecruit',
+                        imoNumber: imo || agency.phone || '+251911000000',
+                    },
+                },
+            };
+        });
+
+        return { data };
     }
 
     // Admin inquiries for agency
