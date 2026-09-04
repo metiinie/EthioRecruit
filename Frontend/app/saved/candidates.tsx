@@ -12,6 +12,8 @@ import {
 import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { savedService } from '../../services/savedService';
+import { getValidImageUri } from '../../utils/imageUtils';
+import { ContactUsButton } from '../../components/ContactAgencyModal';
 
 export default function SavedCandidatesScreen() {
     const router = useRouter();
@@ -75,7 +77,7 @@ export default function SavedCandidatesScreen() {
                             >
                                 <Image
                                     source={{
-                                        uri: candidate?.photoUrl || 'https://via.placeholder.com/150.png?text=Photo',
+                                        uri: getValidImageUri(candidate?.photoUrl) || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200',
                                     }}
                                     style={styles.avatar}
                                 />
@@ -87,12 +89,21 @@ export default function SavedCandidatesScreen() {
                                     <Text style={styles.subText}>{candidate?.currentCountry || 'Ethiopia'} • {candidate?.experienceYears ? `${candidate.experienceYears} yrs exp` : 'Fresh'}</Text>
                                 </View>
 
-                                <TouchableOpacity
-                                    onPress={() => handleUnsave(candidate.id)}
-                                    style={{ padding: 8 }}
-                                >
-                                    <Ionicons name="trash-outline" size={20} color="#E53E3E" />
-                                </TouchableOpacity>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                    <ContactUsButton
+                                        agency={candidate?.agency}
+                                        topicName={`${candidate?.firstName || ''} ${candidate?.lastName || ''}`}
+                                        label="Contact Us"
+                                        compact
+                                    />
+
+                                    <TouchableOpacity
+                                        onPress={() => handleUnsave(candidate.id)}
+                                        style={{ padding: 6 }}
+                                    >
+                                        <Ionicons name="trash-outline" size={18} color="#E53E3E" />
+                                    </TouchableOpacity>
+                                </View>
                             </TouchableOpacity>
                         );
                     }}

@@ -192,6 +192,12 @@ export default function AgencyProfileScreen() {
                 tgUrl = `https://t.me/${cleanValue}`;
             }
             Linking.openURL(tgUrl).catch(() => Alert.alert('Error', 'Could not open Telegram app/web link'));
+        } else if (typeUpper === 'IMO') {
+            const imoUrl = `imo://user?phone=${cleanValue.replace('+', '')}`;
+            Linking.canOpenURL(imoUrl).then((sup) => {
+                if (sup) Linking.openURL(imoUrl);
+                else Alert.alert('IMO Contact', `Agency IMO Contact: ${value}`);
+            }).catch(() => Alert.alert('IMO Contact', `Agency IMO Contact: ${value}`));
         } else if (typeUpper === 'PHONE') {
             Linking.openURL(`tel:${cleanValue || rawVal}`).catch(() => Alert.alert('Error', 'Could not launch phone dialer'));
         }

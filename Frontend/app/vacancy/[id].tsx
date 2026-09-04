@@ -9,11 +9,13 @@ import {
     Modal,
     TextInput,
     Alert,
+    Linking,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { vacancyService } from '../../services/vacancyService';
 import { savedService } from '../../services/savedService';
+import { AgencyContactBar } from '../../components/AgencyContactBar';
 
 export default function VacancyDetailScreen() {
     const { id } = useLocalSearchParams<{ id: string }>();
@@ -72,6 +74,33 @@ export default function VacancyDetailScreen() {
             Alert.alert('Error', error.response?.data?.message || 'Failed to submit application');
         } finally {
             setSubmittingApply(false);
+        }
+    };
+
+    const launchAgencyOutreach = (channel: 'WHATSAPP' | 'TELEGRAM' | 'IMO') => {
+        const agencyPhone = vacancy?.agency?.whatsappNumber || vacancy?.agency?.phone || '+251911000000';
+        const cleanPhone = agencyPhone.replace(/[^\d]/g, '');
+        const title = vacancy?.title || 'Vacancy';
+        const prefilledText = encodeURIComponent(`Hello ${vacancy?.agency?.name || 'Agency'}, I am interested in applying for "${title}" on EthioRecruit.`);
+
+        if (channel === 'WHATSAPP') {
+            const waApp = `whatsapp://send?phone=${cleanPhone}&text=${prefilledText}`;
+            const waWeb = `https://wa.me/${cleanPhone}?text=${prefilledText}`;
+            Linking.canOpenURL(waApp).then((supported) => {
+                if (supported) Linking.openURL(waApp);
+                else Linking.openURL(waWeb);
+            }).catch(() => Linking.openURL(waWeb));
+        } else if (channel === 'TELEGRAM') {
+            const tgUsername = vacancy?.agency?.telegramUsername || cleanPhone;
+            const tgUrl = `https://t.me/${tgUsername.replace('@', '')}`;
+            Linking.openURL(tgUrl).catch(() => Alert.alert('Telegram', `Agency Telegram: ${tgUsername}`));
+        } else if (channel === 'IMO') {
+            const imoPhone = vacancy?.agency?.imoNumber || agencyPhone;
+            const imoUrl = `imo://user?phone=${imoPhone.replace('+', '')}`;
+            Linking.canOpenURL(imoUrl).then((sup) => {
+                if (sup) Linking.openURL(imoUrl);
+                else Alert.alert('IMO Contact', `Agency IMO Contact: ${imoPhone}`);
+            }).catch(() => Alert.alert('IMO Contact', `Agency IMO Contact: ${imoPhone}`));
         }
     };
 
@@ -156,14 +185,22 @@ export default function VacancyDetailScreen() {
                 ))}
             </View>
 
-            {/* Employer / Managing Agency */}
+            {/* Employer / Managing Agency & Direct Contact Channels */}
             {vacancy.agency && (
-                <View style={styles.agencyCard}>
-                    <Ionicons name="business" size={24} color="#1A365D" />
-                    <View style={{ marginLeft: 12, flex: 1 }}>
-                        <Text style={styles.agencyName}>{vacancy.agency.name}</Text>
-                        <Text style={styles.agencySub}>Registered Agency</Text>
+                <View style={styles.agencyContainer}>
+                    <View style={styles.agencyCard}>
+                        <Ionicons name="business" size={24} color="#1A365D" />
+                        <View style={{ marginLeft: 12, flex: 1 }}>
+                            <Text style={styles.agencyName}>{vacancy.agency.name}</Text>
+                            <Text style={styles.agencySub}>Licensed Overseas Recruitment Agency</Text>
+                        </View>
                     </View>
+
+                    {/* Direct Contact Bar for Job Seekers */}
+                    <AgencyContactBar
+                        agency={vacancy.agency}
+                        vacancyTitle={vacancy.title}
+                    />
                 </View>
             )}
 
@@ -260,17 +297,34 @@ const styles = StyleSheet.create({
     reqValue: { fontSize: 14, fontWeight: '600', color: '#2D3748' },
     bulletRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
     bulletText: { fontSize: 14, color: '#4A5568' },
-    agencyCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
+    agencyContainer: {
         backgroundColor: '#EDF2F7',
         marginHorizontal: 16,
         marginTop: 16,
         padding: 16,
         borderRadius: 12,
+        gap: 12,
+    },
+    agencyCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
     agencyName: { fontSize: 15, fontWeight: 'bold', color: '#1A365D' },
     agencySub: { fontSize: 12, color: '#718096' },
+    directContactTitle: { fontSize: 12, fontWeight: '700', color: '#4A5568', textTransform: 'uppercase', letterSpacing: 0.5 },
+    directChannelRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+    directChannelBtn: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        paddingVertical: 9,
+        paddingHorizontal: 10,
+        borderRadius: 10,
+        borderWidth: 1,
+    },
+    directChannelText: { fontSize: 12, fontWeight: '800' },
     actionFooter: {
         position: 'absolute',
         bottom: 0,

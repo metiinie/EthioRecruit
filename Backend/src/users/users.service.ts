@@ -18,6 +18,29 @@ export class UsersService {
         return { data: rest };
     }
 
+    async updateUser(userId: string, data: { firstName?: string; lastName?: string; whatsappNumber?: string; telegramUsername?: string; imoNumber?: string; preferredChannel?: string; profilePhoto?: string }) {
+        const cleanData: any = {};
+        if (data.firstName !== undefined) cleanData.firstName = data.firstName;
+        if (data.lastName !== undefined) cleanData.lastName = data.lastName;
+        if (data.whatsappNumber !== undefined) cleanData.whatsappNumber = data.whatsappNumber;
+        if (data.telegramUsername !== undefined) cleanData.telegramUsername = data.telegramUsername;
+        if (data.imoNumber !== undefined) cleanData.imoNumber = data.imoNumber;
+        if (data.preferredChannel !== undefined) cleanData.preferredChannel = data.preferredChannel;
+        if (data.profilePhoto !== undefined) cleanData.profilePhoto = data.profilePhoto;
+
+        const updated = await this.prisma.user.update({
+            where: { id: userId },
+            data: cleanData,
+            include: {
+                jobseekerProfile: true,
+                employerProfile: true,
+            },
+        });
+
+        const { password, ...rest } = updated;
+        return { data: rest };
+    }
+
     async updateJobseekerProfile(userId: string, data: any) {
         const profile = await this.prisma.jobseekerProfile.upsert({
             where: { userId },

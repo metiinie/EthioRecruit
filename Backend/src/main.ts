@@ -17,24 +17,12 @@ async function bootstrap() {
     // Global prefix
     app.setGlobalPrefix('v1');
 
-    // CORS
-    const customOrigins = configService.get<string>('CORS_ORIGINS')?.split(',') || [];
+    // CORS: Allow full origin reflection in development for Web, Expo Go, and Mobile devices
     app.enableCors({
-        origin: (origin, callback) => {
-            // Allow same-origin / non-browser requests (no Origin header)
-            if (!origin) return callback(null, true);
-            if (
-                origin.includes('localhost') ||
-                origin.includes('127.0.0.1') ||
-                customOrigins.includes(origin) ||
-                /^http:\/\/(192\.168|10|172\.(1[6-9]|2[0-9]|3[0-1]))\.\d+\.\d+(:\d+)?$/.test(origin)
-            ) {
-                return callback(null, true);
-            }
-            // Reject all other origins — do NOT allow unconditionally
-            return callback(new Error('Not allowed by CORS'), false);
-        },
+        origin: true,
         credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
     });
 
     // Global validation pipe with strict payload validation

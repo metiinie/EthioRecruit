@@ -20,6 +20,7 @@ import { candidateService } from '../../services/candidateService';
 import { vacancyService } from '../../services/vacancyService';
 import { CandidatePostCard } from '../../components/CandidatePostCard';
 import { VacancyPostCard } from '../../components/VacancyPostCard';
+import { JobApplicationModal } from '../../components/JobApplicationModal';
 
 const CATEGORIES = [
     { id: 'all', name: 'All Categories' },
@@ -291,49 +292,19 @@ export default function BrowseScreen() {
             }
 
             {/* Apply Modal */}
-            {
-                selectedVacancy && (
-                    <Modal visible transparent animationType="slide">
-                        <View style={styles.modalOverlay}>
-                            <View style={styles.modalCard}>
-                                <View style={styles.modalHeader}>
-                                    <Text style={styles.modalTitle}>Apply for {selectedVacancy.title}</Text>
-                                    <TouchableOpacity onPress={() => setSelectedVacancy(null)}>
-                                        <Ionicons name="close" size={24} color={Colors.gray500} />
-                                    </TouchableOpacity>
-                                </View>
-                                <Text style={styles.modalSub}>
-                                    Location: {selectedVacancy.country} • Agency: {selectedVacancy.agency?.name}
-                                </Text>
-                                <TextInput
-                                    style={styles.modalInput}
-                                    placeholder="Optional cover letter or note to recruitment agency..."
-                                    placeholderTextColor={Colors.gray400}
-                                    multiline
-                                    numberOfLines={4}
-                                    value={coverLetter}
-                                    onChangeText={setCoverLetter}
-                                />
-                                <TouchableOpacity
-                                    style={[styles.modalSubmit, applyMutation.isPending && { opacity: 0.6 }]}
-                                    onPress={() =>
-                                        applyMutation.mutate({
-                                            vacancyId: selectedVacancy.id,
-                                            coverLetter,
-                                        })
-                                    }
-                                    disabled={applyMutation.isPending}
-                                >
-                                    <Text style={styles.modalSubmitText}>
-                                        {applyMutation.isPending ? 'Submitting...' : 'Confirm Application'}
-                                    </Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    </Modal>
-                )
-            }
-        </View >
+            <JobApplicationModal
+                visible={!!selectedVacancy}
+                vacancy={selectedVacancy}
+                onClose={() => setSelectedVacancy(null)}
+                onSubmit={(payload) =>
+                    applyMutation.mutate({
+                        vacancyId: selectedVacancy.id,
+                        coverLetter: payload.coverLetter,
+                    })
+                }
+                isSubmitting={applyMutation.isPending}
+            />
+        </View>
     );
 }
 

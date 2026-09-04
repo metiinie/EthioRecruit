@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius } from '../constants';
+import { getValidImageUri } from '../utils/imageUtils';
+import { AgencyContactBar } from './AgencyContactBar';
 
 interface CandidatePostCardProps {
     candidate: any;
@@ -76,8 +78,8 @@ export function CandidatePostCard({
 
             {/* 2. Candidate Hero Info Row */}
             <View style={styles.candidateHeroRow}>
-                {candidate.photoUrl ? (
-                    <Image source={{ uri: candidate.photoUrl }} style={styles.avatarImage} />
+                {getValidImageUri(candidate.photoUrl) ? (
+                    <Image source={{ uri: getValidImageUri(candidate.photoUrl)! }} style={styles.avatarImage} />
                 ) : (
                     <View style={styles.avatarCircle}>
                         <Text style={styles.avatarInitial}>
@@ -168,7 +170,14 @@ export function CandidatePostCard({
                 </View>
             )}
 
-            {/* 6. Post Action Footer */}
+            {/* 6. Direct Agency Contact Shortcuts Bar */}
+            <AgencyContactBar
+                agency={candidate.agency}
+                candidateName={`${candidate.firstName || ''} ${candidate.lastName || ''}`}
+                compact
+            />
+
+            {/* 7. Post Action Footer */}
             <View style={styles.postFooter}>
                 <TouchableOpacity
                     style={styles.secondaryActionBtn}

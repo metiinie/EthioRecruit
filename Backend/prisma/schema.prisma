@@ -205,6 +205,10 @@ model User {
   isPlatformAdmin Boolean              @default(false) @map("is_platform_admin")
   profilePhoto    String?              @map("profile_photo")
   phoneVerified   Boolean              @default(false) @map("phone_verified")
+  whatsappNumber   String?              @map("whatsapp_number")
+  telegramUsername String?              @map("telegram_username")
+  imoNumber        String?              @map("imo_number")
+  preferredChannel String               @default("WHATSAPP") @map("preferred_channel")
   isActive        Boolean              @default(true) @map("is_active")
   createdAt       DateTime             @default(now()) @map("created_at")
   updatedAt       DateTime             @updatedAt @map("updated_at")
@@ -321,6 +325,9 @@ model Candidate {
   weightKg             Float?              @map("weight_kg")
   complexion           String?
   phone                String?
+  whatsappNumber       String?             @map("whatsapp_number")
+  telegramUsername     String?             @map("telegram_username")
+  imoNumber            String?             @map("imo_number")
   emergencyContactName String?             @map("emergency_contact_name")
   emergencyContactPhone String?            @map("emergency_contact_phone")
   emergencyContactRelation String?         @map("emergency_contact_relation")

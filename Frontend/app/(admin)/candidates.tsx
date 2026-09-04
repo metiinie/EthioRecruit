@@ -11,11 +11,13 @@ import {
     RefreshControl,
     Image,
     Modal,
+    Linking,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { candidateService } from '../../services/candidateService';
+import { getValidImageUri } from '../../utils/imageUtils';
 
 export default function AdminCandidatesScreen() {
     const router = useRouter();
@@ -25,7 +27,44 @@ export default function AdminCandidatesScreen() {
     const [selectedCategory, setSelectedCategory] = useState('ALL');
     const [selectedCandidate, setSelectedCandidate] = useState<any | null>(null);
     const [editModalVisible, setEditModalVisible] = useState(false);
+    const [outreachModalVisible, setOutreachModalVisible] = useState(false);
     const [updating, setUpdating] = useState(false);
+
+    const launchOutreachChannel = (type: string, cand: any) => {
+        if (!cand) return;
+        const rawPhone = (cand.whatsappNumber || cand.phone || '').replace(/[^\d+]/g, '');
+        const cleanPhone = rawPhone.replace('+', '');
+        const candName = `${cand.firstName || ''} ${cand.lastName || ''}`.trim();
+        const prefilledText = encodeURIComponent(`Hello ${candName}, this is EthioRecruit Overseas Agency regarding your candidate profile for ${cand.appliedPosition || 'recruitment'}.`);
+
+        if (type === 'WHATSAPP') {
+            const phoneToUse = cleanPhone || '251911000000';
+            const waApp = `whatsapp://send?phone=${phoneToUse}&text=${prefilledText}`;
+            const waWeb = `https://wa.me/${phoneToUse}?text=${prefilledText}`;
+            Linking.canOpenURL(waApp).then((supported) => {
+                if (supported) Linking.openURL(waApp);
+                else Linking.openURL(waWeb);
+            }).catch(() => Linking.openURL(waWeb));
+        } else if (type === 'TELEGRAM') {
+            let tgUrl = `https://t.me/${(cand.telegramUsername || '').replace('@', '')}`;
+            if (!cand.telegramUsername && rawPhone) {
+                tgUrl = `https://t.me/${rawPhone}`;
+            }
+            Linking.openURL(tgUrl).catch(() => Alert.alert('Telegram Link', `Candidate Telegram: ${cand.telegramUsername || rawPhone}`));
+        } else if (type === 'IMO') {
+            const imoPhone = cand.imoNumber || cand.phone || '';
+            const imoUrl = `imo://user?phone=${imoPhone.replace('+', '')}`;
+            Linking.canOpenURL(imoUrl).then((supported) => {
+                if (supported) Linking.openURL(imoUrl);
+                else {
+                    Alert.alert('IMO Contact', `Candidate IMO Contact: ${imoPhone}`);
+                    Linking.openURL(`tel:${imoPhone}`).catch(() => { });
+                }
+            }).catch(() => {
+                Alert.alert('IMO Contact', `Candidate IMO Contact: ${imoPhone}`);
+            });
+        }
+    };
 
     // Form state for candidate editing modal
     const [editForm, setEditForm] = useState({
@@ -224,8 +263,8 @@ export default function AdminCandidatesScreen() {
                             <View key={cand.id} style={styles.card}>
                                 {/* Top Candidate Row */}
                                 <View style={styles.cardHeader}>
-                                    {cand.photoUrl ? (
-                                        <Image source={{ uri: cand.photoUrl }} style={styles.avatarImage} />
+                                    {getValidImageUri(cand.photoUrl) ? (
+                                        <Image source={{ uri: getValidImageUri(cand.photoUrl)! }} style={styles.avatarImage} />
                                     ) : (
                                         <View style={styles.avatar}>
                                             <Text style={styles.avatarText}>{cand.firstName?.[0] || 'C'}</Text>
@@ -303,6 +342,37 @@ export default function AdminCandidatesScreen() {
                                             <Text style={[styles.metaChipText, { color: '#1D4ED8', fontWeight: '700' }]}>✈️ Gulf Exp</Text>
                                         </View>
                                     ) : null}
+                                </View>
+
+                                {/* Multi-Channel Outreach Bar for Admins */}
+                                <View style={styles.cardOutreachRow}>
+                                    <Text style={styles.outreachLabel}>Outreach:</Text>
+                                    <TouchableOpacity
+                                        style={[styles.outreachBtn, { backgroundColor: '#DCFCE7', borderColor: '#86EFAC' }]}
+                                        onPress={() => launchOutreachChannel('WHATSAPP', cand)}
+                                        activeOpacity={0.8}
+                                    >
+                                        <Ionicons name="logo-whatsapp" size={14} color="#16A34A" />
+                                        <Text style={[styles.outreachBtnText, { color: '#15803D' }]}>WhatsApp</Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={[styles.outreachBtn, { backgroundColor: '#E0F2FE', borderColor: '#7DD3FC' }]}
+                                        onPress={() => launchOutreachChannel('TELEGRAM', cand)}
+                                        activeOpacity={0.8}
+                                    >
+                                        <Ionicons name="paper-plane-outline" size={14} color="#0284C7" />
+                                        <Text style={[styles.outreachBtnText, { color: '#0369A1' }]}>Telegram</Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={[styles.outreachBtn, { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' }]}
+                                        onPress={() => launchOutreachChannel('IMO', cand)}
+                                        activeOpacity={0.8}
+                                    >
+                                        <Ionicons name="call-outline" size={14} color="#D97706" />
+                                        <Text style={[styles.outreachBtnText, { color: '#B45309' }]}>IMO</Text>
+                                    </TouchableOpacity>
                                 </View>
                             </View>
                         ))
@@ -506,6 +576,30 @@ const styles = StyleSheet.create({
         borderColor: '#E2E8F0',
     },
     metaChipText: { fontSize: 11, color: '#475569', fontWeight: '600' },
+
+    // Multi-Channel Outreach Row Styles
+    cardOutreachRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: 10,
+        paddingTop: 8,
+        borderTopWidth: 1,
+        borderTopColor: '#F1F5F9',
+        flexWrap: 'wrap',
+    },
+    outreachLabel: { fontSize: 11, fontWeight: '800', color: '#64748B' },
+    outreachBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 8,
+        paddingVertical: 5,
+        borderRadius: 8,
+        borderWidth: 1,
+    },
+    outreachBtnText: { fontSize: 11, fontWeight: '800' },
+
     cardFooter: {
         flexDirection: 'row',
         justifyContent: 'flex-end',

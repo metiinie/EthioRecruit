@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform, Modal, TextInput, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius } from '../../constants';
 import { useAuthStore } from '../../stores/authStore';
 import { authService } from '../../services/authService';
+import { getErrorMessage } from '../../services/api';
 import { HeaderBar } from '../../components/HeaderBar';
 import { LanguageModal } from '../../components/LanguageModal';
 import { NotificationModal } from '../../components/NotificationModal';
@@ -21,6 +22,67 @@ export default function ProfileScreen() {
 
     const [langModalVisible, setLangModalVisible] = useState(false);
     const [notifModalVisible, setNotifModalVisible] = useState(false);
+    const [messagingModalVisible, setMessagingModalVisible] = useState(false);
+
+    // Messaging Handles State
+    const [whatsappNumber, setWhatsappNumber] = useState(user?.whatsappNumber || user?.phone || '');
+    const [telegramUsername, setTelegramUsername] = useState(user?.telegramUsername || '');
+    const [imoNumber, setImoNumber] = useState(user?.imoNumber || user?.phone || '');
+    const [preferredChannel, setPreferredChannel] = useState(user?.preferredChannel || 'WHATSAPP');
+    const [savingHandles, setSavingHandles] = useState(false);
+
+    React.useEffect(() => {
+        if (user) {
+            setWhatsappNumber(user.whatsappNumber || user.phone || '');
+            setTelegramUsername(user.telegramUsername || '');
+            setImoNumber(user.imoNumber || user.phone || '');
+            setPreferredChannel(user.preferredChannel || 'WHATSAPP');
+        }
+    }, [user, messagingModalVisible]);
+
+    const handleSaveMessagingHandles = async () => {
+        setSavingHandles(true);
+        try {
+            const cleanWa = whatsappNumber.trim();
+            const cleanTg = telegramUsername.trim().replace('@', '');
+            const cleanImo = imoNumber.trim();
+
+            const res = await authService.updateMe({
+                whatsappNumber: cleanWa,
+                telegramUsername: cleanTg,
+                imoNumber: cleanImo,
+                preferredChannel,
+            });
+            const updatedUser = res?.data || res;
+            if (updatedUser && updatedUser.id) {
+                const currentUser = useAuthStore.getState().user || {};
+                const mergedUser = {
+                    ...currentUser,
+                    ...updatedUser,
+                    whatsappNumber: cleanWa,
+                    telegramUsername: cleanTg,
+                    imoNumber: cleanImo,
+                    preferredChannel,
+                };
+                setAuth(mergedUser, useAuthStore.getState().token || '');
+            }
+            if (Platform.OS === 'web' && typeof window !== 'undefined') {
+                window.alert('Success: Your messaging handles (WhatsApp, Telegram, IMO) updated successfully!');
+            } else {
+                Alert.alert('Success', 'Your messaging handles (WhatsApp, Telegram, IMO) updated successfully!');
+            }
+            setMessagingModalVisible(false);
+        } catch (err: any) {
+            const errorMsg = getErrorMessage(err);
+            if (Platform.OS === 'web' && typeof window !== 'undefined') {
+                window.alert(`Save Error: ${errorMsg}`);
+            } else {
+                Alert.alert('Error', errorMsg);
+            }
+        } finally {
+            setSavingHandles(false);
+        }
+    };
 
     const { getCurrentLanguageOption } = useLanguageStore();
     const currentLang = getCurrentLanguageOption();
@@ -161,6 +223,24 @@ export default function ProfileScreen() {
                         <Ionicons name="chevron-forward" size={18} color={Colors.gray400} />
                     </TouchableOpacity>
 
+                    {/* Direct Messaging Handles (WhatsApp, Telegram, IMO) */}
+                    <TouchableOpacity
+                        style={[styles.menuItem, styles.menuBorder]}
+                        onPress={() => setMessagingModalVisible(true)}
+                        activeOpacity={0.7}
+                    >
+                        <View style={styles.menuLeft}>
+                            <View style={[styles.menuIconCircle, { backgroundColor: '#10B98115' }]}>
+                                <Ionicons name="chatbubbles-outline" size={18} color="#10B981" />
+                            </View>
+                            <View>
+                                <Text style={styles.menuLabel}>Messaging Handles</Text>
+                                <Text style={styles.menuSubLabel}>WhatsApp, Telegram & IMO contact channels</Text>
+                            </View>
+                        </View>
+                        <Ionicons name="chevron-forward" size={18} color={Colors.gray400} />
+                    </TouchableOpacity>
+
                     {/* Saved Candidates / Vacancies */}
                     <TouchableOpacity
                         style={styles.menuItem}
@@ -243,6 +323,113 @@ export default function ProfileScreen() {
                 visible={notifModalVisible}
                 onClose={() => setNotifModalVisible(false)}
             />
+
+            {/* Direct Messaging Handles Modal */}
+            <Modal visible={messagingModalVisible} animationType="slide" transparent>
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContainer}>
+                        <View style={styles.modalHeader}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                <Ionicons name="chatbubbles-outline" size={20} color="#10B981" />
+                                <Text style={styles.modalTitle}>Messaging Handles</Text>
+                            </View>
+                            <TouchableOpacity onPress={() => setMessagingModalVisible(false)}>
+                                <Ionicons name="close-circle" size={24} color={Colors.gray500} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <ScrollView contentContainerStyle={{ padding: 18, gap: 14 }}>
+                            <Text style={styles.modalSub}>
+                                Add your WhatsApp, Telegram, and IMO contact handles so agency admins can easily reach you with job opportunities.
+                            </Text>
+
+                            {/* WhatsApp Number Input */}
+                            <Text style={styles.inputLabel}>WhatsApp Number</Text>
+                            <View style={styles.inputWrapper}>
+                                <Ionicons name="logo-whatsapp" size={18} color="#25D366" style={{ marginRight: 8 }} />
+                                <TextInput
+                                    style={styles.modalInput}
+                                    placeholder="+251 911 000 000"
+                                    placeholderTextColor="#94A3B8"
+                                    keyboardType="phone-pad"
+                                    value={whatsappNumber}
+                                    onChangeText={setWhatsappNumber}
+                                />
+                            </View>
+
+                            {/* Telegram Username Input */}
+                            <Text style={styles.inputLabel}>Telegram Username</Text>
+                            <View style={styles.inputWrapper}>
+                                <Ionicons name="paper-plane-outline" size={18} color="#0284C7" style={{ marginRight: 8 }} />
+                                <TextInput
+                                    style={styles.modalInput}
+                                    placeholder="e.g. @username or abebe_k"
+                                    placeholderTextColor="#94A3B8"
+                                    autoCapitalize="none"
+                                    value={telegramUsername}
+                                    onChangeText={setTelegramUsername}
+                                />
+                            </View>
+
+                            {/* IMO Number Input */}
+                            <Text style={styles.inputLabel}>IMO Contact Number</Text>
+                            <View style={styles.inputWrapper}>
+                                <Ionicons name="call-outline" size={18} color="#D97706" style={{ marginRight: 8 }} />
+                                <TextInput
+                                    style={styles.modalInput}
+                                    placeholder="+251 911 000 000"
+                                    placeholderTextColor="#94A3B8"
+                                    keyboardType="phone-pad"
+                                    value={imoNumber}
+                                    onChangeText={setImoNumber}
+                                />
+                            </View>
+
+                            {/* Preferred Contact Channel Selector */}
+                            <Text style={styles.inputLabel}>Preferred Outreach Channel</Text>
+                            <View style={styles.channelRow}>
+                                {[
+                                    { key: 'WHATSAPP', label: 'WhatsApp', icon: 'logo-whatsapp', color: '#25D366' },
+                                    { key: 'TELEGRAM', label: 'Telegram', icon: 'paper-plane-outline', color: '#0284C7' },
+                                    { key: 'IMO', label: 'IMO', icon: 'call-outline', color: '#D97706' },
+                                ].map((ch) => (
+                                    <TouchableOpacity
+                                        key={ch.key}
+                                        style={[
+                                            styles.channelPill,
+                                            preferredChannel === ch.key && { backgroundColor: ch.color + '20', borderColor: ch.color },
+                                        ]}
+                                        onPress={() => setPreferredChannel(ch.key)}
+                                        activeOpacity={0.8}
+                                    >
+                                        <Ionicons name={ch.icon as any} size={14} color={preferredChannel === ch.key ? ch.color : Colors.gray500} />
+                                        <Text style={[
+                                            styles.channelPillText,
+                                            preferredChannel === ch.key && { color: ch.color, fontWeight: '800' },
+                                        ]}>{ch.label}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            <TouchableOpacity
+                                style={[styles.saveBtn, savingHandles && { opacity: 0.6 }]}
+                                onPress={handleSaveMessagingHandles}
+                                disabled={savingHandles}
+                                activeOpacity={0.8}
+                            >
+                                {savingHandles ? (
+                                    <ActivityIndicator size="small" color="#FFFFFF" />
+                                ) : (
+                                    <>
+                                        <Ionicons name="checkmark-done" size={18} color="#FFFFFF" />
+                                        <Text style={styles.saveBtnText}>Save Messaging Handles</Text>
+                                    </>
+                                )}
+                            </TouchableOpacity>
+                        </ScrollView>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -373,4 +560,65 @@ const styles = StyleSheet.create({
         borderColor: Colors.error + '40',
     },
     logoutText: { fontSize: 15, fontWeight: '800', color: Colors.error },
+
+    // Messaging Handles Modal Styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(15, 23, 42, 0.6)',
+        justifyContent: 'flex-end',
+    },
+    modalContainer: {
+        backgroundColor: Colors.white,
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        maxHeight: '85%',
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 18,
+        paddingVertical: 14,
+        borderBottomWidth: 1,
+        borderBottomColor: Colors.gray200,
+    },
+    modalTitle: { fontSize: 18, fontWeight: '900', color: Colors.gray900 },
+    modalSub: { fontSize: 13, color: Colors.gray600, lineHeight: 18 },
+    inputLabel: { fontSize: 12, fontWeight: '800', color: Colors.gray700, marginTop: 4 },
+    inputWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: Colors.gray100,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: Colors.gray300,
+        paddingHorizontal: 12,
+        height: 46,
+    },
+    modalInput: { flex: 1, color: Colors.gray900, fontSize: 14, fontWeight: '600' },
+    channelRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
+    channelPill: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        paddingVertical: 10,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: Colors.gray200,
+        backgroundColor: Colors.gray100,
+    },
+    channelPillText: { fontSize: 12, fontWeight: '700', color: Colors.gray600 },
+    saveBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        backgroundColor: '#10B981',
+        paddingVertical: 14,
+        borderRadius: 14,
+        marginTop: 10,
+    },
+    saveBtnText: { color: Colors.white, fontSize: 14, fontWeight: '900' },
 });

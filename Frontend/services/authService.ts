@@ -36,6 +36,9 @@ export const authService = {
 
     getMe: () =>
         api.get('/users/me').then((r) => r.data),
+
+    updateMe: (data: { whatsappNumber?: string; telegramUsername?: string; imoNumber?: string; preferredChannel?: string }) =>
+        api.put('/users/me', data).then((r) => r.data),
 };
 
 // ── Admin Auth ─────────────────────────────────

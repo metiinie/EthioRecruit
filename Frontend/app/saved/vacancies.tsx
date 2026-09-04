@@ -11,6 +11,7 @@ import {
 import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { savedService } from '../../services/savedService';
+import { ContactUsButton } from '../../components/ContactAgencyModal';
 
 export default function SavedVacanciesScreen() {
     const router = useRouter();
@@ -80,12 +81,21 @@ export default function SavedVacanciesScreen() {
                                     <Text style={styles.subText}>{vacancy?.country || 'Saudi Arabia'} • {vacancy?.agency?.name || 'Agency'}</Text>
                                 </View>
 
-                                <TouchableOpacity
-                                    onPress={() => handleUnsave(vacancy.id)}
-                                    style={{ padding: 8 }}
-                                >
-                                    <Ionicons name="trash-outline" size={20} color="#E53E3E" />
-                                </TouchableOpacity>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                    <ContactUsButton
+                                        agency={vacancy?.agency}
+                                        topicName={vacancy?.title}
+                                        label="Contact Us"
+                                        compact
+                                    />
+
+                                    <TouchableOpacity
+                                        onPress={() => handleUnsave(vacancy.id)}
+                                        style={{ padding: 6 }}
+                                    >
+                                        <Ionicons name="trash-outline" size={18} color="#E53E3E" />
+                                    </TouchableOpacity>
+                                </View>
                             </TouchableOpacity>
                         );
                     }}

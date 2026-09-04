@@ -82,6 +82,18 @@ export class CreateCandidateDto {
 
     @IsString()
     @IsOptional()
+    whatsappNumber?: string;
+
+    @IsString()
+    @IsOptional()
+    telegramUsername?: string;
+
+    @IsString()
+    @IsOptional()
+    imoNumber?: string;
+
+    @IsString()
+    @IsOptional()
     emergencyContactName?: string;
 
     @IsString()

@@ -4,23 +4,25 @@ import Constants from 'expo-constants';
 import { useAuthStore } from '../stores/authStore';
 import { useAdminAuthStore } from '../stores/adminAuthStore';
 
-const getBaseUrl = (): string => {
-    // 1. Web environment: Browser executes on developer machine / web domain
-    if (Platform.OS === 'web') {
-        if (typeof window !== 'undefined' && window.location?.hostname) {
-            return `http://${window.location.hostname}:3000/v1`;
-        }
-        return 'http://localhost:3000/v1';
-    }
-
-    // 2. Mobile environment (Expo Go / QR Scanning):
-    // Prioritize explicit environment variable override for mobile
+export function getDynamicBaseUrl(): string {
+    // 1. Explicit env override
     const envUrl = process.env.EXPO_PUBLIC_API_URL;
     if (envUrl) {
         return envUrl;
     }
 
-    // Dynamic host IP detection from Expo Metro bundler connection
+    // 2. Web environment: MUST strictly match the active browser hostname (window.location.hostname)
+    // NEVER fall through to Metro hostUri on Web to avoid browser cross-origin preflight blocking
+    if (Platform.OS === 'web') {
+        if (typeof window !== 'undefined' && window.location?.hostname) {
+            const host = window.location.hostname;
+            const port = 3000;
+            return `http://${host}:${port}/v1`;
+        }
+        return 'http://localhost:3000/v1';
+    }
+
+    // 3. Mobile Expo Go / Native App: Dynamically detect Metro bundler host IP
     const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest2?.extra?.expoGo?.debuggerHost;
     if (hostUri) {
         const ip = hostUri.split(':')[0];
@@ -29,14 +31,16 @@ const getBaseUrl = (): string => {
         }
     }
 
-    // 3. Fallback to localhost
-    return 'http://localhost:3000/v1';
-};
+    // 4. Android emulator fallback (10.0.2.2 bridges to developer machine localhost)
+    if (Platform.OS === 'android') {
+        return 'http://10.0.2.2:3000/v1';
+    }
 
-export const API_URL = getBaseUrl();
-if (typeof console !== 'undefined') {
-    console.log('🚀 [EthioRecruit API] Target API_URL:', API_URL, '| Platform:', Platform.OS);
+    // 5. Default fallback
+    return 'http://localhost:3000/v1';
 }
+
+export const API_URL = getDynamicBaseUrl();
 
 export const api = axios.create({
     baseURL: API_URL,
@@ -45,7 +49,6 @@ export const api = axios.create({
         'Content-Type': 'application/json',
     },
 });
-
 
 /**
  * Extracts a human-readable error message from Axios errors, NestJS validation arrays, or network failures.
@@ -58,7 +61,8 @@ export function getErrorMessage(error: any): string {
         if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
             return 'Connection timed out. Please check your internet connection.';
         }
-        return `Network error: Unable to reach server (${error.config?.baseURL || API_URL}). Please verify backend is running on the same network.`;
+        const activeUrl = error.config?.baseURL || getDynamicBaseUrl();
+        return `Network error: Unable to reach server at ${activeUrl}. Please verify the backend is running and reachable.`;
     }
 
     const data = error.response.data;
@@ -73,8 +77,11 @@ export function getErrorMessage(error: any): string {
     return error.message || 'Request failed';
 }
 
-// Attach user or admin JWT to requests with strict session isolation
+// Dynamic base URL resolution + Authorization interceptor
 api.interceptors.request.use((config) => {
+    // Re-evaluate base URL dynamically per request so physical devices/emulators resolve correct host IP
+    config.baseURL = getDynamicBaseUrl();
+
     const token = useAuthStore.getState().token;
     const adminToken = useAdminAuthStore.getState().adminToken;
 

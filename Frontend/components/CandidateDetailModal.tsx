@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, BorderRadius, Spacing } from '../constants';
+import { getValidImageUri } from '../utils/imageUtils';
+import { AgencyContactBar } from './AgencyContactBar';
 
 interface CandidateDetailModalProps {
     candidate: any | null;
@@ -52,8 +54,8 @@ export const CandidateDetailModal: React.FC<CandidateDetailModalProps> = ({
                             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
                                 {/* Profile Banner */}
                                 <View style={styles.profileHeaderCard}>
-                                    {candidate.photoUrl ? (
-                                        <Image source={{ uri: candidate.photoUrl }} style={styles.avatarImage} />
+                                    {getValidImageUri(candidate.photoUrl) ? (
+                                        <Image source={{ uri: getValidImageUri(candidate.photoUrl)! }} style={styles.avatarImage} />
                                     ) : (
                                         <View style={styles.avatarCircle}>
                                             <Text style={styles.avatarText}>
@@ -185,6 +187,12 @@ export const CandidateDetailModal: React.FC<CandidateDetailModalProps> = ({
                                         <Text style={styles.agencySub}>Official Recruitment Partner</Text>
                                     </View>
                                 </View>
+
+                                {/* Direct Agency Contact Bar */}
+                                <AgencyContactBar
+                                    agency={candidate.agency}
+                                    candidateName={`${candidate.firstName || ''} ${candidate.lastName || ''}`}
+                                />
                             </ScrollView>
 
                             {/* Bottom Action Footer */}
@@ -198,7 +206,7 @@ export const CandidateDetailModal: React.FC<CandidateDetailModalProps> = ({
                                     activeOpacity={0.85}
                                 >
                                     <Ionicons name="chatbubble-ellipses" size={18} color={Colors.white} />
-                                    <Text style={styles.inquireFullBtnText}>Inquire with Agency</Text>
+                                    <Text style={styles.inquireFullBtnText}>Inquire with Agency via Platform</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>

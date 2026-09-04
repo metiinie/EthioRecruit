@@ -18,6 +18,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius } from '../../constants';
 import { candidateService } from '../../services/candidateService';
 import { savedService } from '../../services/savedService';
+import { getValidImageUri } from '../../utils/imageUtils';
+import { AgencyContactBar } from '../../components/AgencyContactBar';
 
 export default function CandidateDetailScreen() {
     const { id } = useLocalSearchParams<{ id: string }>();
@@ -215,8 +217,8 @@ export default function CandidateDetailScreen() {
             >
                 {/* Main Profile Header Card */}
                 <View style={styles.profileHeaderCard}>
-                    {candidate.photoUrl ? (
-                        <Image source={{ uri: candidate.photoUrl }} style={styles.avatarImage} />
+                    {getValidImageUri(candidate.photoUrl) ? (
+                        <Image source={{ uri: getValidImageUri(candidate.photoUrl)! }} style={styles.avatarImage} />
                     ) : (
                         <View style={styles.avatarCircle}>
                             <Text style={styles.avatarText}>
@@ -422,6 +424,13 @@ export default function CandidateDetailScreen() {
                             <Text style={styles.modalSub}>
                                 Direct inquiry regarding {candidate.firstName} {candidate.lastName} to {candidate.agency?.name || 'the agency'}.
                             </Text>
+
+                            {/* Direct Agency Contact Shortcuts */}
+                            <AgencyContactBar
+                                agency={candidate.agency}
+                                candidateName={`${candidate.firstName} ${candidate.lastName}`}
+                            />
+
                             <TextInput
                                 style={styles.modalInput}
                                 placeholder="Specify required start date, working conditions, salary budget, or questions..."

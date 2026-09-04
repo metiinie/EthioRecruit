@@ -21,6 +21,14 @@ export class UsersController {
         return this.usersService.getMe(userId);
     }
 
+    @Put('me')
+    updateMe(
+        @CurrentUser('id') userId: string,
+        @Body() data: any,
+    ) {
+        return this.usersService.updateUser(userId, data);
+    }
+
     @Put('me/jobseeker-profile')
     updateJobseekerProfile(
         @CurrentUser('id') userId: string,

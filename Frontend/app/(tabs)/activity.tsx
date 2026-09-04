@@ -11,6 +11,7 @@ import {
     Modal,
     TextInput,
     Alert,
+    Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,6 +21,8 @@ import { HeaderBar } from '../../components/HeaderBar';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { activityService } from '../../services/pipelineService';
 import { candidateService } from '../../services/candidateService';
+import { ContactUsButton } from '../../components/ContactAgencyModal';
+import { AgencyContactBar } from '../../components/AgencyContactBar';
 
 export default function ActivityScreen() {
     const router = useRouter();
@@ -30,6 +33,37 @@ export default function ActivityScreen() {
     const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'responded'>('all');
     const [selectedCandidate, setSelectedCandidate] = useState<any>(null);
     const [followUpMessage, setFollowUpMessage] = useState('');
+
+    const launchAgencyOutreach = (channel: 'WHATSAPP' | 'TELEGRAM' | 'IMO', agency: any, topicTitle?: string) => {
+        if (!agency) {
+            Alert.alert('Agency Info', 'Agency contact details are not available for this entry.');
+            return;
+        }
+        const agencyPhone = agency?.whatsappNumber || agency?.phone || '+251911000000';
+        const cleanPhone = agencyPhone.replace(/[^\d]/g, '');
+        const topic = topicTitle ? ` regarding "${topicTitle}"` : '';
+        const prefilledText = encodeURIComponent(`Hello ${agency?.name || 'Agency'}, I am reaching out via EthioRecruit${topic}.`);
+
+        if (channel === 'WHATSAPP') {
+            const waApp = `whatsapp://send?phone=${cleanPhone}&text=${prefilledText}`;
+            const waWeb = `https://wa.me/${cleanPhone}?text=${prefilledText}`;
+            Linking.canOpenURL(waApp).then((supported) => {
+                if (supported) Linking.openURL(waApp);
+                else Linking.openURL(waWeb);
+            }).catch(() => Linking.openURL(waWeb));
+        } else if (channel === 'TELEGRAM') {
+            const tgUsername = agency?.telegramUsername || cleanPhone;
+            const tgUrl = `https://t.me/${tgUsername.replace('@', '')}`;
+            Linking.openURL(tgUrl).catch(() => Alert.alert('Telegram', `Agency Telegram: ${tgUsername}`));
+        } else if (channel === 'IMO') {
+            const imoPhone = agency?.imoNumber || agencyPhone;
+            const imoUrl = `imo://user?phone=${imoPhone.replace('+', '')}`;
+            Linking.canOpenURL(imoUrl).then((sup) => {
+                if (sup) Linking.openURL(imoUrl);
+                else Alert.alert('IMO Contact', `Agency IMO Contact: ${imoPhone}`);
+            }).catch(() => Alert.alert('IMO Contact', `Agency IMO Contact: ${imoPhone}`));
+        }
+    };
 
     // Fetch Applications (Job Seeker mode)
     const applicationsQuery = useQuery({
@@ -176,6 +210,42 @@ export default function ActivityScreen() {
                                 <Text style={styles.dateText}>
                                     Applied on: {new Date(app.createdAt).toLocaleDateString()}
                                 </Text>
+
+                                {/* Direct Agency Contact Bar & Contact Us Modal Button */}
+                                {app.vacancy?.agency && (
+                                    <View style={styles.inquiryContactRow}>
+                                        <Text style={styles.contactLabel}>Contact Agency:</Text>
+                                        <ContactUsButton
+                                            agency={app.vacancy.agency}
+                                            topicName={app.vacancy.title}
+                                            label="Contact Us"
+                                            compact
+                                        />
+                                        <TouchableOpacity
+                                            style={[styles.miniOutreachBtn, { backgroundColor: '#DCFCE7', borderColor: '#86EFAC' }]}
+                                            onPress={() => launchAgencyOutreach('WHATSAPP', app.vacancy.agency, app.vacancy.title)}
+                                        >
+                                            <Ionicons name="logo-whatsapp" size={12} color="#16A34A" />
+                                            <Text style={[styles.miniOutreachBtnText, { color: '#15803D' }]}>WhatsApp</Text>
+                                        </TouchableOpacity>
+
+                                        <TouchableOpacity
+                                            style={[styles.miniOutreachBtn, { backgroundColor: '#E0F2FE', borderColor: '#7DD3FC' }]}
+                                            onPress={() => launchAgencyOutreach('TELEGRAM', app.vacancy.agency, app.vacancy.title)}
+                                        >
+                                            <Ionicons name="paper-plane-outline" size={12} color="#0284C7" />
+                                            <Text style={[styles.miniOutreachBtnText, { color: '#0369A1' }]}>Telegram</Text>
+                                        </TouchableOpacity>
+
+                                        <TouchableOpacity
+                                            style={[styles.miniOutreachBtn, { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' }]}
+                                            onPress={() => launchAgencyOutreach('IMO', app.vacancy.agency, app.vacancy.title)}
+                                        >
+                                            <Ionicons name="call-outline" size={12} color="#D97706" />
+                                            <Text style={[styles.miniOutreachBtnText, { color: '#B45309' }]}>IMO</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
                             </View>
                         ))
                     )}
@@ -304,6 +374,42 @@ export default function ActivityScreen() {
                                             </View>
                                         )}
                                     </View>
+
+                                    {/* Direct Agency Social / Messaging Contact Bar */}
+                                    {cand?.agency && (
+                                        <View style={styles.inquiryContactRow}>
+                                            <Text style={styles.contactLabel}>Direct Agency Contact:</Text>
+                                            <ContactUsButton
+                                                agency={cand.agency}
+                                                topicName={cand ? `${cand.firstName} ${cand.lastName}` : 'Candidate Inquiry'}
+                                                label="Contact Us"
+                                                compact
+                                            />
+                                            <TouchableOpacity
+                                                style={[styles.miniOutreachBtn, { backgroundColor: '#DCFCE7', borderColor: '#86EFAC' }]}
+                                                onPress={() => launchAgencyOutreach('WHATSAPP', cand.agency, cand ? `${cand.firstName} ${cand.lastName}` : 'Candidate')}
+                                            >
+                                                <Ionicons name="logo-whatsapp" size={12} color="#16A34A" />
+                                                <Text style={[styles.miniOutreachBtnText, { color: '#15803D' }]}>WhatsApp</Text>
+                                            </TouchableOpacity>
+
+                                            <TouchableOpacity
+                                                style={[styles.miniOutreachBtn, { backgroundColor: '#E0F2FE', borderColor: '#7DD3FC' }]}
+                                                onPress={() => launchAgencyOutreach('TELEGRAM', cand.agency, cand ? `${cand.firstName} ${cand.lastName}` : 'Candidate')}
+                                            >
+                                                <Ionicons name="paper-plane-outline" size={12} color="#0284C7" />
+                                                <Text style={[styles.miniOutreachBtnText, { color: '#0369A1' }]}>Telegram</Text>
+                                            </TouchableOpacity>
+
+                                            <TouchableOpacity
+                                                style={[styles.miniOutreachBtn, { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' }]}
+                                                onPress={() => launchAgencyOutreach('IMO', cand.agency, cand ? `${cand.firstName} ${cand.lastName}` : 'Candidate')}
+                                            >
+                                                <Ionicons name="call-outline" size={12} color="#D97706" />
+                                                <Text style={[styles.miniOutreachBtnText, { color: '#B45309' }]}>IMO</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    )}
 
                                     {/* Action Bar Footer */}
                                     <View style={styles.cardFooter}>
@@ -569,6 +675,29 @@ const styles = StyleSheet.create({
     statusBadgeTeal: { backgroundColor: Colors.accent + '15', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
     statusBadgeTealText: { fontSize: 11, fontWeight: '800', color: Colors.accentDark },
     dateText: { fontSize: 11, color: Colors.gray400, marginTop: 8 },
+
+    /* Inquiry Direct Agency Contact Row */
+    inquiryContactRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: 10,
+        paddingTop: 8,
+        borderTopWidth: 1,
+        borderTopColor: Colors.gray100,
+        flexWrap: 'wrap',
+    },
+    contactLabel: { fontSize: 11, fontWeight: '800', color: Colors.gray600 },
+    miniOutreachBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 8,
+        paddingVertical: 5,
+        borderRadius: 6,
+        borderWidth: 1,
+    },
+    miniOutreachBtnText: { fontSize: 11, fontWeight: '800' },
 
     /* Modal */
     modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.65)', justifyContent: 'flex-end' },
